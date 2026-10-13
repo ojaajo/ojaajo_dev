@@ -1,0 +1,711 @@
+body, header, h1, h2, h3, label, select, button {
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background-color: #f9f9fb;
+  margin: 0;
+  padding: 0;
+}
+header {
+  background-color: #333;
+  color: #fff;
+  padding: 15px 0;
+  text-align: center;
+  font-size: 28px;
+}
+.container {
+  max-width: 600px;
+  background-color: #fff;
+  margin: 40px auto;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+h3 {
+  margin-top: 15px;
+  font-size: 20px;
+  border-left: 6px solid #007BFF;
+  padding-left: 10px;
+}
+button {
+  display: inline-block;
+  margin: 10px 5px 10px 0;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background-color: #007BFF;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease-in-out;
+}
+button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+.form-group {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.form-group label {
+  font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+}
+.form-group select {
+  padding: 4px 8px;
+  font-size: 14px;
+}
+.page-range {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.checkbox-group {
+  margin: 10px 0;
+}
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  gap: 5px;
+}
+select.level-select {
+  width: 160px;
+}
+
+body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #f9f9fb;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #333;
+      color: #fff;
+      padding: 15px 0;
+      text-align: center;
+      font-size: 24px;
+    }
+    .container {
+      max-width: 600px;
+      background-color: #fff;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+    h3 {
+      margin-top: 15px;
+      font-size: 20px;
+      border-left: 6px solid #007BFF;
+      padding-left: 10px;
+    }
+    button {
+      display: inline-block;
+      margin: 10px 5px 10px 0;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: all 0.2s ease-in-out;
+    }
+    button:hover {
+      background-color: #0056b3;
+      transform: translateY(-1px);
+    }
+    .form-group {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .form-group label {
+      font-size: 14px;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .form-group select {
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    .page-range {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .checkbox-group {
+      margin: 10px 0;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      gap: 5px;
+    }
+    select.level-select {
+    width: 160px; /* 表示ページセレクト2個＋～と同じくらいの幅に調整 */
+    }
+
+body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            display: inline-block;
+            margin: 5px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+        .modal-content button {
+            margin: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #f4f4f9;
+        }
+        .scrollable-table {
+            max-height: 450px;  /* テーブルの最大高さ */
+            overflow-y: auto;   /* 縦スクロールを許可 */
+            border: 1px solid #ddd;
+            position: relative;
+            padding: 0;
+            margin: 0;
+            -webkit-overflow-scrolling: touch;  /* iOSのスムーズスクロールを有効化 */
+            touch-action: auto;  /* タッチスクロールを有効化 */
+        }
+
+        .scrollable-table table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            padding: 0;
+        }
+
+        .scrollable-table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f4f4f4;
+            z-index: 2;
+            height: 30px;
+            line-height: 30px;
+        }
+        td.green {
+            color: green;
+            background-color: #d4edda;
+        }
+
+        td.red {
+            color: red;
+            background-color: #f8d7da;
+        }
+        .hidden-korean {
+            visibility: hidden;
+        }
+
+        .hidden-meaning {
+            visibility: hidden;
+        }
+        #word-container {
+            display: flex;
+            align-items: center;
+        }
+
+        #word {
+            margin-right: 2px; /* スピーカーアイコンとの間に適切なスペースを追加 */
+        }
+        table th, table td {
+            height: 20px;   /* 各行の高さを50pxに設定 */
+        }
+        /* モーダルのスタイル */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #modal-yes {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #modal-no {
+            background-color: #f44336;
+            color: white;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;  /* 水平方向に中央揃え */
+            align-items: center;      /* 垂直方向にも中央揃え */
+            gap: 10px;
+            margin-top: 20px;         /* ボタンとカードの間にスペースを追加（必要に応じて調整） */
+        }
+
+
+        #correct-btn, #incorrect-btn {
+            font-size: 24px;
+            width: 170px;            /* 幅を適切に設定 */
+            height: 50px;           /* 高さを適切に設定 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 10px;
+            line-height: 1;
+            box-sizing: border-box;
+        }
+
+        #card {
+            width: 100%;
+            max-width: 450px;
+            height: auto; /* 高さは内容に応じて可変 */
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #e0e0e0; /* グレーのカード色 */
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column; /* 縦に並べる */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+#word-container {
+    display: flex;
+    justify-content: center;  /* 単語を中央揃え */
+    align-items: center;
+    width: 100%;  /* 親要素の幅を均等に */
+}
+
+#word-wrapper {
+    display: flex;
+    align-items: center;  /* 単語と📢を縦中央揃え */
+    justify-content: center;  /* 📢マークを単語の右に配置 */
+    gap: 8px;  /* 単語と📢マークの間隔 */
+    min-width: 200px;  /* 単語の幅を一定にし、意味と揃えやすくする */
+}
+
+#word {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;  /* 長い単語でも折り返さない */
+}
+
+#speaker-icon {
+    font-size: 20px;
+    cursor: pointer;
+}
+
+#meaning {
+    display: block;
+    font-size: 18px;
+    color: #555;
+    text-align: center;  /* 単語の意味も中央揃え */
+    margin-top: 10px;
+    min-width: 200px;  /* `#word-wrapper` と同じ幅を設定 */
+}
+.progress-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+/* 〇×ボタンの下に黒線を引いて、矢印ボタンを配置 */
+.button-container {
+    display: flex;
+    justify-content: center;  /* 水平方向に中央揃え */
+    align-items: center;      /* 垂直方向にも中央揃え */
+    gap: 10px;
+    margin-top: 20px;         /* ボタンとカードの間にスペースを追加（必要に応じて調整） */
+}
+
+/* 黒線を引くためのスタイル */
+.line-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-top: 10px; /* ボタンと黒線の間にスペース */
+}
+
+/* 黒線 */
+.black-line {
+    width: 100%;
+    height: 2px;
+    background-color: rgba(0, 0, 0, 0.1);  /* 薄い黒線 */
+    margin-bottom: 10px;  /* 黒線と矢印ボタンの間にスペース */
+}
+
+/* 矢印ボタンのスタイル */
+.arrows-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;  /* 親要素いっぱいに広がる */
+    padding: 0 10px;  /* 両端に適切な余白を追加 */
+}
+.word-list-controls {
+    display: flex;
+    justify-content: space-between; /* 左右に配置 */
+    align-items: center; /* 高さを揃える */
+    width: 100%; /* 横幅いっぱいに広げる */
+    margin-top: 10px; /* テーブルとの間隔 */
+}
+
+.word-list-buttons {
+    display: flex;
+    gap: 10px; /* ボタン同士の間隔 */
+}
+
+.word-list-buttons button {
+    padding: 5px 10px;
+    font-size: 20px;
+}
+#toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ff4d4d;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    font-size: 0.9em;
+    z-index: 9999;
+    display: none;   /* 初期状態は非表示 */
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#toast.show {
+    display: block;
+    opacity: 1;
+}
+
+    .container {
+      max-width: 600px;
+      background-color: #fff;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+    h3 {
+      margin-top: 15px;
+      font-size: 20px;
+      border-left: 6px solid #007BFF;
+      padding-left: 10px;
+    }
+    .form-group {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .form-group label {
+      font-size: 14px;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .form-group select {
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    .page-range {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .page-range select {
+      width: 60px;
+    }
+    .level-select {
+      width: 160px;
+    }
+    .checkbox-group {
+      margin: 10px 0;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      gap: 5px;
+    }
+ #word-list-body td:nth-child(1),
+#word-list-body td:nth-child(2) {
+  text-align: left;
+  padding-left: 20px;
+}
+#word-list table td:nth-child(1),
+#word-list table th:nth-child(1) {
+  width: 120px;
+}
+
+#word-list table td:nth-child(2),
+#word-list table th:nth-child(2) {
+  width: 270px;
+}
+
+#word-list table td:nth-child(3),
+#word-list table th:nth-child(3) {
+  width: 70px;
+}
+select {
+  max-height: 260px;
+  overflow-y: auto;
+  display: block;
+}
+
+/* 単語セル：左に単語、右にアイコン */
+.word-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;        /* 折り返し防止（必要なら） */
+}
+
+/* テキスト側（抽出用のフックにも使う） */
+.word-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* アイコンボタンを控えめに（キーボード操作にも配慮してbutton化） */
+.icon-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.9em;           /* 📢を少し小さめ */
+  opacity: 0.45;              /* 目立ちすぎない */
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity 0.15s, transform 0.05s;
+}
+.word-cell:hover .icon-btn,
+.icon-btn:focus-visible {
+  opacity: 1;                 /* ホバー/フォーカス時だけクッキリ */
+}
+.icon-btn:active {
+  transform: translateY(1px);
+}
+
+/* 表現力UPモード時に単語一覧の文字を小さくする */
+#scrollable-table.small-text-mode table {
+  font-size: 12px;
+}
+/* サマリーの1行目（左：チェック群／右：合計）を同じ高さに */
+#word-summary{
+  display: grid;
+  grid-template-columns: 1fr auto;  /* 左は可変、右は内容幅 */
+  align-items: center;               /* 縦位置を中央揃え */
+  row-gap: 6px;                      /* 1行目とバーの間 */
+  column-gap: 12px;
+  margin-bottom: 0;
+}
+
+/* 左側（チェック＋ラベル） */
+#word-summary .status-group{
+  grid-column: 1 / 2;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;                   /* 横が足りなければ折り返し */
+  align-items: center;
+  margin: 0;
+}
+
+/* 右側（/ 合計 XX） */
+#word-summary .summary-total{
+  grid-column: 2 / 3;
+  white-space: nowrap;               /* 折り返さないで右に寄せる */
+  margin: 0;
+}
+
+/* 進捗バーは2列ぶち抜きで2段目に */
+#word-summary .progress-bar{
+  grid-column: 1 / 3;
+  margin: 2px 0 0 0;
+}
+
+.status-item.green { color: #6dbd61; }   /* 黄緑 */
+.status-item.red   { color: #e07c7c; }   /* 淡い赤 */
+.status-item.gray  { color: #888; }      /* 薄灰 */
+.summary-total     { color: #666; margin-left: auto; }
+
+.progress-bar {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e6e6e6;
+}
+/* ====== ① 上部の白余白を小さくする ====== */
+
+/* 「単語一覧」タイトルとサマリーの間 */
+#word-list h2 {
+  margin-top: 6px !important;  /* 上の空きを減らす */
+  margin-bottom: 6px !important;
+}
+
+/* サマリー全体の外側マージンも最小化 */
+#word-summary {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* ページ全体にパディングが効いている場合に備えて軽く上を詰める */
+#word-list,
+#word-list .card,
+#word-list .content {
+  padding-top: 8px !important;
+}
+/* サマリー1段目（チェック群と合計）→バー→表、の縦ギャップ最小化 */
+#word-summary { margin-bottom: 0 !important; }
+#word-summary .status-group { margin: 0 !important; line-height: 1.2; }
+#word-summary .summary-total { margin: 0 !important; }
+#word-summary .progress-bar { margin: 4px 0 6px 0 !important; }
+
+/* バーの角丸を綺麗に出す */
+#word-summary .progress-bar {
+  height: 8px;
+  border-radius: 6px;
+  overflow: hidden;                /* 角丸を子要素に適用 */
+  background: #e6e6e6;
+}
+#word-summary .progress-bar .bar { border-radius: 0; }
+
+/* バー直後の要素（区切り線やテーブルラッパ）の上余白を潰す */
+#word-summary + * { margin-top: 0 !important; }
+
+/* 表コンテナ側の余白をゼロに */
+#scrollable-table { margin-top: 0 !important; }
+
+/* ヘッダとの隙間をなくす（tableの仕様で生まれる隙間対策） */
+#scrollable-table table {
+  border-collapse: collapse;       /* これで境界のスキマが消える */
+  border-spacing: 0;
+}
+.bar { height: 100%; transition: width 0.3s; }
+.bar.green { background: #9ed993; }  /* 明るい黄緑 */
+.bar.red   { background: #f1b0b0; }  /* 淡い赤 */
+.bar.gray  { background: #cfcfcf; }  /* 薄灰 */
+
+
+/* 列の一括非表示（クリック可能にするため display:none は使わない） */
+.hide-col-word    td.col-word,
+.hide-col-meaning td.col-meaning {
+  opacity: 0;                     /* 見えなくする */
+  cursor: pointer;                /* 触れることが分かるように */
+  transition: opacity .12s;
+  position: relative;
+}
+
+/* ヒント（うっすら点線背景）：不要なら消してOK */
+.hide-col-word    td.col-word::after,
+.hide-col-meaning td.col-meaning::after {
+  content: ''; position: absolute; inset: 6px;
+  background-image: radial-gradient(#ddd 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: .5; pointer-events: none;
+}
+
+/* セル個別の再表示（peek） */
+td.peek-cell { 
+  opacity: 1 !important;          /* 列が隠れていてもこのセルだけ見える */
+}
