@@ -709,3 +709,34 @@ select {
 td.peek-cell { 
   opacity: 1 !important;          /* 列が隠れていてもこのセルだけ見える */
 }
+
+/* Step 3: New screens and bottom navigation (scoped to avoid legacy UI changes) */
+body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+#legacy-workspace[hidden],#modern-workspace[hidden],#modern-workspace .modern-page[hidden] {display:none!important;}
+#modern-workspace {box-sizing:border-box;min-height:calc(100vh - 86px);background:#111419;color:#f4f6f2;font-family:'Noto Sans JP',sans-serif;padding:38px 22px 40px;}
+#modern-workspace * {box-sizing:border-box;}
+#modern-workspace .modern-page {max-width:660px;margin:0 auto;}
+#modern-workspace .modern-eyebrow {font-size:11px;font-weight:800;letter-spacing:2px;color:#b9ed7a;margin-bottom:14px;}
+#modern-workspace h1 {font-size:32px;line-height:1.35;color:#f4f6f2;text-align:left;margin:0 0 10px;font-weight:800;}
+#modern-workspace h2 {font-size:17px;color:#f4f6f2;margin:34px 0 16px;}
+#modern-workspace .modern-subtitle {font-size:14px;color:#9ba49b;margin:0 0 30px;}
+#modern-workspace .modern-feature {display:flex;align-items:center;gap:17px;padding:24px 20px;background:linear-gradient(120deg,#273329,#1b2620);border:1px solid #3a4d38;border-radius:20px;}
+#modern-workspace .modern-feature-icon {font-size:29px;color:#b9ed7a;}
+#modern-workspace .modern-feature strong {font-size:17px;}
+#modern-workspace .modern-feature p {color:#b5c1b3;margin:7px 0 0;font-size:13px;}
+#modern-workspace .modern-action {width:100%;display:flex;align-items:center;gap:17px;text-align:left;background:#1b2026;border:1px solid #30363d;border-radius:16px;color:#f4f6f2;padding:18px 17px;margin:10px 0;box-shadow:none;}
+#modern-workspace .modern-action>span:first-child {font-size:24px;color:#b9ed7a;width:32px;text-align:center;}
+#modern-workspace .modern-action>span:nth-child(2) {display:flex;flex:1;flex-direction:column;gap:4px;}
+#modern-workspace .modern-action strong {font-size:15px;}
+#modern-workspace .modern-action small {font-size:12px;color:#9ba49b;}
+#modern-workspace .modern-action>span:last-child {font-size:24px;color:#9ba49b;}
+#modern-workspace .modern-note {font-size:12px;color:#9ba49b;line-height:1.9;margin-top:24px;}
+#modern-workspace .modern-empty {min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px dashed #3b4449;border-radius:18px;background:#1b2026;padding:25px;gap:13px;}
+#modern-workspace .modern-empty>span {font-size:34px;color:#b9ed7a;}
+#modern-workspace .modern-empty strong {font-size:17px;}
+#modern-workspace .modern-empty p {color:#9ba49b;font-size:13px;line-height:1.8;margin:0;}
+#modern-workspace .modern-outline {margin-top:18px;width:100%;background:transparent;border:1px solid #b9ed7a;color:#b9ed7a;border-radius:12px;padding:15px;box-shadow:none;font-weight:700;}
+#study-bottom-nav {position:fixed;z-index:10001;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:9px max(8px,calc((100vw - 660px)/2)) calc(9px + env(safe-area-inset-bottom));background:rgba(17,20,25,.97);border-top:1px solid #323a3d;backdrop-filter:blur(14px);}
+#study-bottom-nav .study-nav-item {display:flex;flex-direction:column;align-items:center;gap:5px;border:0;border-radius:12px;background:transparent;color:#9ba49b;font-size:11px;font-weight:700;padding:9px 2px;box-shadow:none;min-width:0;}
+#study-bottom-nav .study-nav-icon {font-size:22px;line-height:1.1;}
+#study-bottom-nav .study-nav-item.is-active {background:#2b3629;color:#b9ed7a;}

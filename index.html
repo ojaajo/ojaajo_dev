@@ -15,6 +15,7 @@
 <script src="supabase.js"></script>
 </head>
 <body>
+<div id="legacy-workspace">
 <header>
 <h1>韓国語単語暗記ツール</h1>
 </header>
@@ -335,5 +336,36 @@ if ('serviceWorker' in navigator) {
 <meta name="theme-color" content="#4CAF50">
 <script src="words.js"></script>
 <script src="app.js"></script>
-</div></body>
+</div>
+</div><!-- /legacy-workspace -->
+<main id="modern-workspace" hidden aria-label="新しい学習画面">
+  <section class="modern-page" data-screen="home">
+    <div class="modern-eyebrow">YOUR STUDY SPACE</div>
+    <h1>ホーム</h1>
+    <p class="modern-subtitle">今日も少しずつ、覚えていこう。</p>
+    <div class="modern-feature"><span class="modern-feature-icon">✦</span><div><strong>韓国語の学習</strong><p>新しい学習ホームを準備中</p></div></div>
+    <h2>学習メニュー</h2>
+    <button class="modern-action" type="button" data-go="list"><span>☷</span><span><strong>単語リスト</strong><small>単語一覧を開く</small></span><span>›</span></button>
+    <button class="modern-action" type="button" data-go="cards"><span>▣</span><span><strong>フラッシュカード</strong><small>カード画面を開く</small></span><span>›</span></button>
+    <div class="modern-note">現在はデザイン確認用です。学習データは旧画面から利用できます。</div>
+  </section>
+  <section class="modern-page" data-screen="list" hidden>
+    <div class="modern-eyebrow">VOCABULARY</div><h1>リスト</h1><p class="modern-subtitle">単語一覧の新画面を準備中</p>
+    <div class="modern-empty"><span>☷</span><strong>単語リスト</strong><p>次の工程でSupabaseのリストを表示できるようにします。</p></div>
+    <button class="modern-outline" type="button" data-go="legacy">旧画面で単語一覧を使う</button>
+  </section>
+  <section class="modern-page" data-screen="cards" hidden>
+    <div class="modern-eyebrow">FLASHCARDS</div><h1>カード</h1><p class="modern-subtitle">暗記学習の新画面を準備中</p>
+    <div class="modern-empty"><span>▣</span><strong>フラッシュカード</strong><p>次の工程で既存のカード学習機能を接続します。</p></div>
+    <button class="modern-outline" type="button" data-go="legacy">旧画面でカード学習を使う</button>
+  </section>
+</main>
+<nav id="study-bottom-nav" aria-label="画面切り替え">
+  <button type="button" class="study-nav-item is-active" data-tab="legacy" aria-current="page"><span class="study-nav-icon">▤</span><span>旧画面</span></button>
+  <button type="button" class="study-nav-item" data-tab="home"><span class="study-nav-icon">⌂</span><span>ホーム</span></button>
+  <button type="button" class="study-nav-item" data-tab="list"><span class="study-nav-icon">☷</span><span>リスト</span></button>
+  <button type="button" class="study-nav-item" data-tab="cards"><span class="study-nav-icon">▣</span><span>カード</span></button>
+</nav>
+<script src="navigation.js"></script>
+</body>
 </html>
