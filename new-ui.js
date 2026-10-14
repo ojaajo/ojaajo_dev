@@ -6,7 +6,7 @@ const names=[['beginner','初級','beginnerWords'],['intermediate','中級','int
 function el(id){return document.getElementById(id)}
 function safeText(id,s){if(el(id))el(id).textContent=s}
 function unsupported(){alert('この操作は現在移行中です。旧画面から操作してください。');}
-function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')renderCardLists();window.scrollTo(0,0)}
+function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();window.scrollTo(0,0)}
 function activeWords(){return lists[currentList]||[]}
 function updateHomeStats(){let words=Object.values(lists).flat();safeText('homeWordCount',words.length);safeText('homeListCount',Object.keys(lists).length);safeText('homeKnownCount',words.filter(w=>w.known).length)}
 // One shared list-card component for both the List and Cards entry screens.
@@ -53,7 +53,66 @@ function setListExamples(on){allExamples=on;renderWords()}
 function toggleWordShuffle(on){shuffleEnabled=on;renderWords()}
 function renderWords(){const root=el('wordList');root.replaceChildren();const query=el('search').value.trim().toLowerCase();const allowed=new Set([...document.querySelectorAll('.dynamicStatusFilter:checked')].map(x=>x.value));let words=activeWords().filter(w=>!query||`${w.ko} ${w.ja} ${w.ex||''}`.toLowerCase().includes(query));if(!query)words=words.slice((rangeStart-1)*80,rangeEnd*80);if(shuffleEnabled)words=[...words].sort(()=>Math.random()-.5);words.filter(w=>allowed.has(w.status)).forEach(w=>{const a=document.createElement('article');a.className='word';const top=document.createElement('div');top.className='word-top';const body=document.createElement('div');body.style.flex='1';const ko=document.createElement('div');ko.className='korean'+(showKo?'':' hidden-text');ko.textContent=w.ko;const ja=document.createElement('div');ja.className='meaning'+(showJa?'':' hidden-text');ja.textContent=w.ja;body.append(ko,ja);const status=document.createElement('span');status.className='status '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';top.append(body,status);a.append(top);if(w.ex){const btn=document.createElement('button');btn.className='btn small';btn.textContent='例文を見る';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex;btn.onclick=()=>{ex.hidden=!ex.hidden;btn.textContent=ex.hidden?'例文を見る':'例文を隠す'};a.append(btn,ex)}root.append(a)});const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`)}
 function openActionChooser(){unsupported()}function openCreateList(){unsupported()}function openImport(){unsupported()}function openAdd(){unsupported()}
-function showCardLists(){unsupported()}function chooseCardList(){unsupported()}function showCardSetup(){unsupported()}function validateCardPages(){}function updateCardEstimate(){}function startCardQuiz(){unsupported()}function revealMeaning(){unsupported()}function toggleCardExample(){unsupported()}function markCard(){unsupported()}function prevCard(){unsupported()}function nextCard(){unsupported()}
+// Card learning: settings and navigation use real words; write actions stay disabled.
+let cardListKey='beginner',cardDeck=[],cardIndex=0,meaningRevealed=false,exampleShown=false;
+function showCardLists(){el('cardListView').hidden=false;el('cardSetupView').hidden=true;el('cardQuizView').hidden=true;renderCardLists()}
+function chooseCardList(key){
+  if(!lists[key])return;
+  cardListKey=key;
+  safeText('cardSetupTitle',listNames[key]||key);
+  const pages=Math.max(1,Math.ceil(lists[key].length/WORDS_PER_PAGE));
+  for(const id of ['cardStartPage','cardEndPage']){
+    const select=el(id);select.replaceChildren();
+    for(let i=1;i<=pages;i++){const option=document.createElement('option');option.value=String(i);option.textContent=i+'ページ';select.append(option)}
+    select.value=id==='cardStartPage'?'1':String(pages);
+  }
+  document.querySelectorAll('.card-status').forEach(c=>c.checked=true);
+  el('cardShuffle').checked=true;el('cardAutoVoice').checked=false;
+  showCardSetup();window.scrollTo(0,0);
+}
+function showCardSetup(){el('cardListView').hidden=true;el('cardSetupView').hidden=false;el('cardQuizView').hidden=true;updateCardEstimate()}
+function validateCardPages(changed){
+  const a=el('cardStartPage'),b=el('cardEndPage');
+  if(Number(a.value)>Number(b.value)){if(changed==='start')b.value=a.value;else a.value=b.value}
+  updateCardEstimate();
+}
+function buildCardDeck(){
+  const from=(Number(el('cardStartPage').value)-1)*WORDS_PER_PAGE;
+  const to=Number(el('cardEndPage').value)*WORDS_PER_PAGE;
+  const allowed=new Set([...document.querySelectorAll('.card-status:checked')].map(c=>c.value));
+  return (lists[cardListKey]||[]).map((_,i)=>i).slice(from,to).filter(i=>allowed.has(lists[cardListKey][i].status));
+}
+function updateCardEstimate(){safeText('cardEstimatedCount',`出題予定：${buildCardDeck().length}語`)}
+function startCardQuiz(){
+  cardDeck=buildCardDeck();
+  if(!cardDeck.length){alert('対象の単語がありません。表示範囲やステータスを確認してください。');return}
+  if(el('cardShuffle').checked){for(let i=cardDeck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cardDeck[i],cardDeck[j]]=[cardDeck[j],cardDeck[i]]}}
+  cardIndex=0;meaningRevealed=false;exampleShown=false;
+  el('cardListView').hidden=true;el('cardSetupView').hidden=true;el('cardQuizView').hidden=false;
+  renderCard();playCardVoice();window.scrollTo(0,0);
+}
+function currentCardWord(){return (lists[cardListKey]||[])[cardDeck[cardIndex]]}
+function renderCard(){
+  if(el('cardQuizView').hidden)return;
+  const w=currentCardWord();if(!w)return;
+  safeText('cardCounter',`${cardIndex+1} / ${cardDeck.length}`);
+  document.querySelectorAll('#cardQuizView [id="cardListName"]').forEach(n=>n.textContent=listNames[cardListKey]||cardListKey);
+  safeText('cardKorean',w.ko);safeText('cardMeaning',meaningRevealed?w.ja:'…');
+  safeText('revealBtn',meaningRevealed?'意味を隠す':'意味を表示する');
+  el('cardExample').hidden=!exampleShown;
+  safeText('cardExampleText',w.ex||'例文は未登録です。');safeText('cardExampleMeaning',w.exja||'');
+}
+function playCardVoice(){
+  if(!el('cardAutoVoice').checked||!('speechSynthesis' in window))return;
+  const w=currentCardWord();if(!w)return;
+  window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(w.ko);
+  utterance.lang='ko-KR';utterance.rate=.9;window.speechSynthesis.speak(utterance);
+}
+function revealMeaning(){meaningRevealed=!meaningRevealed;renderCard()}
+function toggleCardExample(){exampleShown=!exampleShown;renderCard()}
+function markCard(){unsupported()}
+function nextCard(){if(!cardDeck.length)return;cardIndex=(cardIndex+1)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
+function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.length)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
 function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s===true)return 'known';if(s==='未暗記'||s==='incorrect'||s===false)return 'unknown';return 'unseen'}
 async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>({ko:w.word,ja:w.meaning,ex:w.example||'',status:'unseen',known:false}));listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;lists[w.list_key].push({ko:w.word,ja:w.meaning,ex:w.example||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
 // Prevent prototype forms from submitting data until persistence is implemented.
