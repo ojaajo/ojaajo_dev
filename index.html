@@ -160,6 +160,20 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
 section:has(#sb-auth-status){background:#1a1d24!important;color:#eef0f3!important;border:1px solid #384139!important;border-radius:16px!important;box-shadow:0 15px 40px #000b!important}
 section:has(#sb-auth-status) input{background:#111318!important;color:#f4f5f7!important;border:1px solid #424952!important;border-radius:9px!important}
 
+
+/* Step 14: prevent the document itself from scrolling past the bottom navigation.
+   Only the app content scrolls; the navigation stays attached to the viewport. */
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+.app{
+  height:100vh;
+  height:100dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));
+}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0}
 </style>
 <style>
 /* Supabase cloud control stays above the new bottom navigation */
