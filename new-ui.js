@@ -41,7 +41,7 @@ function renderCardLists(){
   root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
 }
 function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex()}
-function openWordList(key){closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();window.scrollTo(0,0)}
+function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();window.scrollTo(0,0)}
 function toggleListSearch(){
   const panel=el('listSearchPanel'),button=el('listSearchToggle');if(!panel||!button)return;
   const opening=panel.hidden;panel.hidden=!opening;
@@ -66,17 +66,99 @@ function speakKorean(text){
   synth.cancel();synth.speak(utterance);
   if(synth.paused)synth.resume();
 }
-function playWordVoice(word){speakKorean(word)}
+function playWordVoice(word){voiceFromOldApp(word)}
 function refreshPageSelectors(){const max=Math.max(1,Math.ceil(activeWords().length/80));for(const id of ['startPage','endPage']){const s=el(id);s.replaceChildren();for(let n=1;n<=max;n++){const o=document.createElement('option');o.value=n;o.textContent=n+'ページ';s.append(o)}s.value=id==='startPage'?rangeStart:rangeEnd}updateRangeLabel()}
 function updateRangeLabel(){safeText('rangeSummary',`${rangeStart}〜${rangeEnd}ページ`);safeText('rangeWordCount',`${Math.max(0,Math.min(activeWords().length,rangeEnd*80)-(rangeStart-1)*80)}語`)}
 function togglePageRange(){el('pageRangePanel').hidden=!el('pageRangePanel').hidden;el('listSettingsPanel').hidden=true}
 function toggleListSettings(){el('listSettingsPanel').hidden=!el('listSettingsPanel').hidden;el('pageRangePanel').hidden=true}
 function validatePageRange(changed){const a=el('startPage'),b=el('endPage');if(+a.value>+b.value){if(changed==='start')b.value=a.value;else a.value=b.value}}
 function applyPageRange(){rangeStart=+el('startPage').value;rangeEnd=+el('endPage').value;el('pageRangePanel').hidden=true;updateRangeLabel();renderWords()}
-function setListVisibility(which,on){if(which==='ko')showKo=on;else showJa=on;renderWords()}
+function setListVisibility(which,on){if(which==='ko')showKo=on;else showJa=on;revealedWords.clear();renderWords()}
 function setListExamples(on){allExamples=on;renderWords()}
 function toggleWordShuffle(on){shuffleEnabled=on;renderWords()}
-function renderWords(){const root=el('wordList');root.replaceChildren();const query=el('search').value.trim().toLowerCase();const allowed=new Set([...document.querySelectorAll('.dynamicStatusFilter:checked')].map(x=>x.value));let words=activeWords().filter(w=>!query||`${w.ko} ${w.ja} ${w.ex||''}`.toLowerCase().includes(query));if(!query)words=words.slice((rangeStart-1)*80,rangeEnd*80);if(shuffleEnabled)words=[...words].sort(()=>Math.random()-.5);words.filter(w=>allowed.has(w.status)).forEach(w=>{const a=document.createElement('article');a.className='word';const top=document.createElement('div');top.className='word-top';const body=document.createElement('div');body.style.flex='1';const ko=document.createElement('div');ko.className='korean'+(showKo?'':' hidden-text');ko.textContent=w.ko;const ja=document.createElement('div');ja.className='meaning'+(showJa?'':' hidden-text');ja.textContent=w.ja;const koLine=document.createElement('div');koLine.className='word-ko-line';const voice=document.createElement('button');voice.type='button';voice.className='audio-btn';voice.setAttribute('aria-label',w.ko+' を再生');voice.title='韓国語を再生';voice.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg>';voice.addEventListener('click',()=>playWordVoice(w.ko));koLine.append(ko,voice);body.append(koLine,ja);const status=document.createElement('span');status.className='status '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';top.append(body,status);a.append(top);if(w.ex){const btn=document.createElement('button');btn.className='btn small';btn.textContent='例文を見る';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex;btn.onclick=()=>{ex.hidden=!ex.hidden;btn.textContent=ex.hidden?'例文を見る':'例文を隠す'};a.append(btn,ex)}root.append(a)});const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`)}
+let selectedWordIndex=-1;
+let visibleWordRows=[];
+let currentAudio=null;
+const revealedWords=new Set();
+function voiceFromOldApp(word){
+  if(!word)return;
+  if(currentAudio){currentAudio.pause();currentAudio.currentTime=0}
+  const audio=new Audio('https://ojaajo-sound.vercel.app/api/tts?text='+encodeURIComponent(word));
+  currentAudio=audio;
+  audio.play().catch(err=>{console.error('旧音声の再生に失敗',err);alert('音声の再生に失敗しました。通信状態を確認してください。')});
+}
+function navigateWord(delta){
+  if(!visibleWordRows.length)return;
+  selectedWordIndex=Math.max(0,Math.min(visibleWordRows.length-1,selectedWordIndex+delta));
+  focusSelectedWord(true);
+}
+function focusSelectedWord(shouldPlay){
+  visibleWordRows.forEach((item,i)=>item.node.classList.toggle('selected-word',i===selectedWordIndex));
+  const item=visibleWordRows[selectedWordIndex];if(!item)return;
+  item.node.scrollIntoView({behavior:'smooth',block:'center'});
+  if(shouldPlay)voiceFromOldApp(item.word.ko);
+}
+function repeatSelectedWord(){
+  if(!visibleWordRows.length)return;
+  if(selectedWordIndex<0)selectedWordIndex=0;
+  focusSelectedWord(true);
+}
+function renderWords(){
+  const root=el('wordList');if(!root)return;
+  root.replaceChildren();visibleWordRows=[];selectedWordIndex=-1;
+  const query=(el('search')?.value||'').trim().toLowerCase();
+  const allowed=new Set([...document.querySelectorAll('.dynamicStatusFilter:checked')].map(x=>x.value));
+  let words=activeWords().filter(w=>!query||`${w.ko} ${w.ja} ${w.ex||''}`.toLowerCase().includes(query));
+  if(!query)words=words.slice((rangeStart-1)*80,rangeEnd*80);
+  if(shuffleEnabled)words=[...words].sort(()=>Math.random()-.5);
+  words.filter(w=>allowed.has(w.status)).forEach(w=>{
+    const a=document.createElement('article');a.className='word';
+    const top=document.createElement('div');top.className='word-top';
+    const body=document.createElement('div');body.style.flex='1';
+    const koLine=document.createElement('div');koLine.className='word-ko-line';
+    function wordPart(text,kind,visible){
+      if(visible||revealedWords.has(currentList+'\0'+w.ko+'\0'+kind)){
+        const label=document.createElement('div');label.className=kind==='ko'?'korean':'meaning';label.textContent=text;return label;
+      }
+      const reveal=document.createElement('button');reveal.type='button';reveal.className='word-reveal';reveal.textContent='…';
+      reveal.title=kind==='ko'?'韓国語を表示':'日本語訳を表示';
+      reveal.addEventListener('click',()=>{revealedWords.add(currentList+'\0'+w.ko+'\0'+kind);reveal.replaceWith(wordPart(text,kind,true))});
+      return reveal;
+    }
+    koLine.append(wordPart(w.ko,'ko',showKo));
+    const voice=document.createElement('button');voice.type='button';voice.className='audio-btn';voice.title='韓国語を再生';voice.setAttribute('aria-label',w.ko+' を再生');
+    voice.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg>';
+    voice.addEventListener('click',()=>voiceFromOldApp(w.ko));koLine.append(voice);
+    body.append(koLine,wordPart(w.ja,'ja',showJa));
+    const right=document.createElement('div');right.className='word-right';
+    const status=document.createElement('span');status.className='status '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';
+    const menu=document.createElement('button');menu.type='button';menu.className='word-edit-menu';menu.textContent='⋮';menu.title='単語の編集';menu.setAttribute('aria-label','単語・訳・例文の編集');
+    menu.addEventListener('click',()=>openWordEditor(w));right.append(status,menu);top.append(body,right);a.append(top);
+    if(w.ex){const btn=document.createElement('button');btn.className='btn small';btn.textContent='例文を見る';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex;btn.onclick=()=>{ex.hidden=!ex.hidden;btn.textContent=ex.hidden?'例文を見る':'例文を隠す'};a.append(btn,ex)}
+    const rowIndex=visibleWordRows.length;visibleWordRows.push({node:a,word:w});
+    a.addEventListener('click',e=>{if(e.target.closest('button'))return;selectedWordIndex=rowIndex;focusSelectedWord(false)});
+    root.append(a);
+  });
+  const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`);
+  const controls=el('wordNavigator');if(controls)controls.hidden=!visibleWordRows.length;
+}
+async function openWordEditor(w){
+  const dialog=el('wordEditDialog');if(!dialog)return;
+  el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';
+  dialog.showModal();
+  el('saveWordEdit').onclick=async()=>{
+    const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim();
+    if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
+    const {data:{user},error:authError}=await supabaseClient.auth.getUser();
+    if(authError||!user){alert('保存するにはログインが必要です。');return}
+    // Built-in lists are stored in words.js, not vocab_words. Never pretend to save them.
+    if(names.some(([key])=>key===currentList)){alert('標準リストの編集はまだ対応していません。元データを保護するため保存しません。');return}
+    const {data,error}=await supabaseClient.from('vocab_words').update({word:ko,meaning:ja,example:ex}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko).select('word');
+    if(error||!data?.length){alert('保存できませんでした。'+(error?.message||'対象が見つかりません'));return}
+    dialog.close();await loadRealData();
+  };
+}
+
 function openActionChooser(){unsupported()}function openCreateList(){unsupported()}function openImport(){unsupported()}function openAdd(){unsupported()}
 // Card learning: settings and navigation use real words; write actions stay disabled.
 let cardListKey='beginner',cardDeck=[],cardIndex=0,meaningRevealed=false,exampleShown=false;
@@ -129,7 +211,7 @@ function renderCard(){
 }
 function playCardVoice(force=false){
   if(!force&&!el('cardAutoVoice').checked)return;
-  const w=currentCardWord();if(w)speakKorean(w.ko);
+  const w=currentCardWord();if(w)voiceFromOldApp(w.ko);
 }
 function revealMeaning(){meaningRevealed=!meaningRevealed;renderCard()}
 function toggleCardExample(){exampleShown=!exampleShown;renderCard()}

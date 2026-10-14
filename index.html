@@ -141,6 +141,25 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
 .card-ko-line{display:flex;justify-content:center;align-items:center;gap:12px;margin:22px 0 10px}
 .card-ko-line .card-korean{margin:0}
 #listSearchToggle{font-size:23px;line-height:1;min-width:36px}
+
+/* Step 10: two independent ellipsis controls and floating navigator */
+.word-reveal{background:transparent;color:#aeb6c4;border:1px dashed #48505b;border-radius:8px;min-width:44px;min-height:32px;padding:2px 10px;font-size:20px;cursor:pointer;text-align:left}
+.word-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.word-edit-menu{background:transparent;color:#aab1bc;border:0;border-radius:9px;min-width:36px;min-height:38px;font-size:23px;cursor:pointer}
+.selected-word{border-color:#b7f36b!important;box-shadow:0 0 0 1px #b7f36b44}
+.word-navigator[hidden]{display:none!important}
+.word-navigator{position:fixed;right:15px;bottom:calc(106px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;gap:3px;background:#252a32;border:1px solid #414854;border-radius:17px;padding:5px;box-shadow:0 8px 25px #0008}
+.word-navigator button{width:42px;height:42px;background:transparent;border:0;color:#e8ebef;font-size:27px;border-radius:11px;cursor:pointer}
+.word-navigator button:nth-child(2){color:#b7f36b;font-size:25px}
+.word-navigator button:active{background:#39413a}
+.word-edit-dialog{background:#1a1d24;color:#f4f5f7;border:1px solid #3b414c;border-radius:18px;width:min(440px,90vw);padding:20px}
+.word-edit-dialog::backdrop{background:#000a}
+.edit-dialog-inner{display:grid;gap:12px}.edit-dialog-inner label{display:grid;gap:5px;font-size:13px}.edit-dialog-inner input,.edit-dialog-inner textarea{background:#111318;border:1px solid #3b414c;border-radius:10px;color:white;padding:10px;font:inherit;width:100%;box-sizing:border-box}
+/* Restyle existing Supabase overlay created by supabase.js. Keep login controls. */
+#sb-cloud-toggle{background:#262d29!important;color:#b7f36b!important;border:1px solid #43533a!important;box-shadow:0 5px 18px #0009!important;right:15px!important;bottom:calc(88px + env(safe-area-inset-bottom))!important;width:45px!important;height:45px!important;font-size:20px!important}
+section:has(#sb-auth-status){background:#1a1d24!important;color:#eef0f3!important;border:1px solid #384139!important;border-radius:16px!important;box-shadow:0 15px 40px #000b!important}
+section:has(#sb-auth-status) input{background:#111318!important;color:#f4f5f7!important;border:1px solid #424952!important;border-radius:9px!important}
+
 </style>
 <style>
 /* Supabase cloud control stays above the new bottom navigation */
@@ -219,6 +238,11 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
     </div>
     <p class="tiny" id="selectedListSummary"></p>
     <div class="word-list" id="wordList"></div>
+    <div id="wordNavigator" class="word-navigator" hidden aria-label="単語の移動と音声再生">
+      <button type="button" onclick="navigateWord(-1)" aria-label="前の単語" title="前の単語">⌃</button>
+      <button type="button" onclick="repeatSelectedWord()" aria-label="リピート再生" title="リピート再生">↻</button>
+      <button type="button" onclick="navigateWord(1)" aria-label="次の単語" title="次の単語">⌄</button>
+    </div>
     <div class="space"></div>
     <button class="btn full" onclick="openImport()">⇧ このリストに単語をインポート</button>
   </div>
@@ -360,11 +384,12 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
     <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="createListBtn" value="default">リストを作成</button></div>
   </form>
 </dialog>
+<dialog id="wordEditDialog" class="word-edit-dialog"><div class="edit-dialog-inner"><h3>単語を編集</h3><label>韓国語<input id="editWordKo" type="text"></label><label>日本語訳<textarea id="editWordJa" rows="3"></textarea></label><label>例文<textarea id="editWordEx" rows="3"></textarea></label><div class="row"><button class="btn" type="button" onclick="document.getElementById('wordEditDialog').close()">キャンセル</button><button class="btn primary" type="button" id="saveWordEdit">保存</button></div></div></dialog>
 <div id="toast" style="position:fixed;left:50%;bottom:95px;transform:translateX(-50%);background:#f4f5f7;color:#111318;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:750;display:none;z-index:20;max-width:90%;text-align:center"></div>
 
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js?v=20261014-step9"></script>
+<script src="new-ui.js?v=20261014-step10"></script>
 </body>
 </html>
