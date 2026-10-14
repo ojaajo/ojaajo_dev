@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&amp;display=swap" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>韓国語単語暗記ツール</title>
+<link rel="stylesheet" href="style.css">
+
+
+<!-- Supabase接続設定 -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="supabase.js"></script>
+</head>
+<body>
+<div id="legacy-workspace">
+<header>
+<h1>韓国語単語暗記ツール</h1>
+</header>
+<div class="container">
+<!-- 出題範囲選択 -->
+<div class="section" id="range-selection"><h3>📋 単語一覧表示</h3><button id="word-list-show-btn">単語一覧を見る</button>
+<div class="form-group">
+<label for="wordlist-level-select">難易度:</label>
+<select class="level-select" id="wordlist-level-select">
+<option value="beginner">初級</option>
+<option value="intermediate">中級</option>
+<option value="advanced">上級</option>
+<option value="expressionup">表現力UP</option>
+<option value="Level4">語学堂4級単語</option>
+<option value="Level5">語学堂5級単語</option>
+</select>
+</div>
+<div class="form-group">
+<label>表示ページ:</label>
+<div class="page-range">
+<select id="wordlist-start-page"></select>
+<span>～</span>
+<select id="wordlist-end-page"></select>
+</div>
+</div>
+<div class="checkbox-group">
+<label><input id="wordlist-shuffle" type="checkbox"/> 単語をランダムに並び替えて表示</label>
+</div>
+<h3>🃏 フラッシュカード出題</h3><button onclick="startQuiz()">フラッシュカード開始</button>
+<div class="form-group">
+<label for="quiz-level-select">難易度:</label>
+<select class="level-select" id="quiz-level-select">
+<option value="beginner">初級</option>
+<option value="intermediate">中級</option>
+<option value="advanced">上級</option>
+<option value="expressionup">表現力UP</option>
+<option value="Level4">語学堂4級単語</option>
+<option value="Level5">語学堂5級単語</option>
+</select>
+</div>
+<div class="form-group">
+<label>出題ページ:</label>
+<div class="page-range">
+<select id="start-page"></select>
+<span>～</span>
+<select id="end-page"></select>
+</div>
+</div>
+<div class="checkbox-group">
+<label><input id="only-incorrect" type="checkbox"/> 未暗記のみ出題</label>
+<label><input id="auto-speak" onchange="toggleAutoSpeak()" type="checkbox"/> 音声再生ON</label>
+</div>
+
+
+<div id="custom-list-import" style="margin: 15px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+  <h3>📥 自分の単語リスト</h3>
+
+  <label for="custom-list-destination">登録先：</label>
+  <select id="custom-list-destination" style="display: block; width: 100%; margin: 8px 0 12px; padding: 8px;">
+    <option value="new">新しいリストを作成</option>
+  </select>
+
+  <div id="custom-list-name-area">
+    <label for="custom-list-name">新しいリストの名前：</label>
+    <input
+      id="custom-list-name"
+      type="text"
+      placeholder="例：韓国語表現・第1回"
+      style="display: block; box-sizing: border-box; width: 100%; margin: 8px 0 12px; padding: 8px;"
+    />
+  </div>
+
+  <label for="custom-list-file">単語リスト（.txt）：</label>
+  <input
+    id="custom-list-file"
+    type="file"
+    accept=".txt,text/plain"
+    style="display: block; margin: 10px 0;"
+  />
+
+  <p style="font-size: 13px; color: #666;">
+    1行に1単語ずつ「韓国語:日本語の意味」の形式で記載してください。<br>
+    1ページ80語で自動的にページ分けします。
+  </p>
+
+  <button id="custom-list-import-btn" type="button">
+    単語リストを読み込む
+  </button>
+
+  <p id="custom-list-import-message" role="status"></p>
+</div>
+
+
+<div>
+<button onclick="exportProgress()">暗記状況を保存</button>
+<input accept=".json" id="import-file" onchange="importProgress(event)" style="display:none;" type="file"/>
+<button onclick="document.getElementById('import-file').click()">暗記状況を読み込む</button>
+<div id="toast" style="
+  display: none;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #ff4d4d;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  font-size: 0.9em;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+"></div>
+</div>
+</div>
+<!-- 出題セクション -->
+<div class="section hidden" id="quiz-section">
+<!-- 進行状況と戻るボタンを横並びにするためのコンテナ -->
+<div class="progress-container">
+<span>進行状況: <span id="progress">0/0</span></span>
+<button onclick="showRangeSelection()">🏠ホーム</button>
+</div>
+<div id="card">
+<div id="word-container">
+<div id="word-wrapper">
+<span id="word">ここに単語が表示されます</span>
+<span id="speaker-icon" onclick="playWord(document.getElementById('word').textContent)">📢</span>
+</div>
+</div>
+<div id="meaning">（意味が表示されます）</div>
+</div>
+<div class="button-container">
+<button id="incorrect-btn" onclick="markAnswer(false)">×</button>
+<button id="correct-btn" onclick="markAnswer(true)">⚪︎</button>
+<button id="next-btn" onclick="nextQuestion()" style="display: none;">次へ</button>
+</div>
+<!-- ここに黒線と矢印ボタンを配置 -->
+<div class="line-container">
+<div class="black-line"></div> <!-- 薄い黒線 -->
+<div class="arrows-container">
+<button id="prev-btn" onclick="moveToPrevious()">←</button>
+<button id="next-btn" onclick="moveToNext()">→</button>
+</div>
+</div>
+<p id="result"></p>
+</div>
+<!-- 単語一覧表示 -->
+<div class="table-container hidden" id="word-list">
+<div class="word-list-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+  <h2 style="margin: 0;">単語一覧</h2>
+
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <button
+      id="word-list-menu-btn"
+      type="button"
+      aria-label="単語リストの管理"
+      title="単語リストの管理"
+      style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; color: inherit; border: none; box-shadow: none; cursor: pointer;"
+    >
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+        <circle cx="5" cy="12" r="1.7"></circle>
+        <circle cx="12" cy="12" r="1.7"></circle>
+        <circle cx="19" cy="12" r="1.7"></circle>
+      </svg>
+    </button>
+
+    <button
+      id="word-list-search-btn"
+      type="button"
+      aria-label="単語を検索"
+      title="単語を検索"
+      style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; color: inherit; border: none; box-shadow: none; cursor: pointer;"
+    >
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="10.8" cy="10.8" r="6.5"></circle>
+        <path d="m16 16 4.2 4.2"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- 単語リスト管理メニュー -->
+<div id="word-list-menu" hidden
+  style="position: absolute; right: 24px; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); min-width: 180px; padding: 6px;">
+
+  <button type="button" class="word-list-menu-item" data-action="add-word"
+    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
+    単語を追加
+  </button>
+
+  <button type="button" class="word-list-menu-item" data-action="edit-word"
+    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
+    単語を編集
+  </button>
+
+  <button type="button" class="word-list-menu-item" data-action="delete-word"
+    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
+    単語を削除
+  </button>
+
+  <div style="height: 1px; background: #e5e5e5; margin: 6px 4px;"></div>
+
+  <button type="button" class="word-list-menu-item" data-action="edit-list"
+    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
+    リスト名を編集
+  </button>
+
+  <button type="button" class="word-list-menu-item" data-action="delete-list"
+    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
+    リストを削除
+  </button>
+
+</div>
+
+<!-- 単語検索欄 -->
+<div id="word-search-area" hidden
+  style="display: none; margin: 0 0 12px 0;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <input
+      id="word-search-input"
+      type="search"
+      placeholder="韓国語・日本語で検索"
+      autocomplete="off"
+      style="flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px;"
+    >
+    <button
+      id="word-search-clear-btn"
+      type="button"
+      aria-label="検索を閉じる"
+      title="検索を閉じる"
+      style="background: transparent; color: inherit; border: none; box-shadow: none; padding: 8px; font-size: 20px; cursor: pointer;"
+    >×</button>
+  </div>
+  <div id="word-search-count"
+    style="font-size: 13px; margin-top: 6px; color: #666;"></div>
+</div>
+
+<!-- 単語進捗サマリー -->
+<div id="word-summary" class="word-summary">
+  <div class="status-group">
+    <label class="status-item green">
+      <input type="checkbox" id="hide-correct" >
+      暗記済 <b>0</b>
+    </label>
+    <label class="status-item red">
+      <input type="checkbox" id="hide-incorrect" >
+      未暗記 <b>0</b>
+    </label>
+    <label class="status-item gray">
+      <input type="checkbox" id="hide-unattempted" >
+      未解答 <b>0</b>
+    </label>
+  </div>
+  <div class="summary-total">
+    / 合計 <b>0</b>
+  </div>
+  <div class="progress-bar">
+    <div id="bar-done" class="bar green"></div>
+    <div id="bar-not" class="bar red"></div>
+    <div id="bar-none" class="bar gray"></div>
+  </div>
+</div>
+<div class="scrollable-table" id="scrollable-table" tabindex="0">
+<table>
+<thead>
+<tr>
+<th>
+                                単語
+                                <label>
+<input id="toggle-korean" onchange="toggleKorean()" type="checkbox"/> 
+                                </label>
+</th>
+<th>
+                                意味
+                                <label>
+<input id="toggle-meaning" onchange="toggleMeaning()" type="checkbox"/> 
+                                </label>
+</th>
+<th>暗記状況</th>
+</tr>
+</thead>
+<tbody id="word-list-body">
+<!-- 動的に生成される内容 -->
+</tbody>
+</table>
+</div>
+<div class="word-list-controls">
+<button onclick="showRangeSelection()">🏠ホーム</button>
+<div class="word-list-buttons">
+<button id="up-button" onclick="playPreviousWord()">↑</button>
+<button id="down-button" onclick="playNextWord()">↓</button>
+<button id="repeat-button" onclick="repeatLastWord()">♻︎</button>
+</div>
+</div>
+</div>
+<!-- モーダル -->
+<div class="modal hidden" id="quiz-modal">
+<div class="modal-content">
+<p id="modal-message">前回途中で終了したクイズがあります。再開しますか？※Noを選択すると履歴がリセットされます。</p>
+<div class="modal-buttons">
+<button id="modal-no">No</button>
+<button id="modal-yes">Yes</button>
+</div>
+</div>
+</div>
+<div class="hidden" id="toast"></div><div class="hidden" id="json-output" style="margin-top:20px;"><p>🔒 進捗データを下からコピーして、メモ帳やiCloud Driveに貼り付けて保存してください。</p><textarea id="json-text" readonly="" rows="10" style="width:100%; font-family: monospace; font-size:14px;"></textarea><button onclick="copyToClipboard()" style="margin-top: 10px;">コピーする</button></div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').then(() => {
+      console.log("Service Worker registered");
+    });
+  });
+}
+</script>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<script src="words.js"></script>
+<script src="app.js"></script>
+</div>
+</div><!-- /legacy-workspace -->
+<main id="modern-workspace" hidden aria-label="新しい学習画面">
+  <section class="modern-page" data-screen="home">
+    <div class="modern-eyebrow">YOUR STUDY SPACE</div>
+    <h1>ホーム</h1>
+    <p class="modern-subtitle">今日も少しずつ、覚えていこう。</p>
+    <div class="modern-feature"><span class="modern-feature-icon">✦</span><div><strong>韓国語の学習</strong><p id="modern-home-overview">学習状況を読み込んでいます…</p></div></div>
+    <h2>単語リスト</h2>
+    <p id="modern-home-status" class="modern-home-status" role="status" aria-live="polite">読み込み中…</p>
+    <div id="modern-home-lists" class="modern-home-lists"></div>
+    <h2>学習メニュー</h2>
+    <button class="modern-action" type="button" data-go="list"><span>☷</span><span><strong>単語リスト</strong><small>単語一覧を開く</small></span><span>›</span></button>
+    <button class="modern-action" type="button" data-go="cards"><span>▣</span><span><strong>フラッシュカード</strong><small>カード画面を開く</small></span><span>›</span></button>
+    <div class="modern-note">単語リストと暗記状況を表示しています。単語の編集・学習は引き続き旧画面から利用できます。</div>
+  </section>
+  <section class="modern-page" data-screen="list" hidden>
+    <div class="modern-eyebrow">VOCABULARY</div><h1>リスト</h1><p class="modern-subtitle">単語一覧の新画面を準備中</p>
+    <div class="modern-empty"><span>☷</span><strong>単語リスト</strong><p>次の工程でSupabaseのリストを表示できるようにします。</p></div>
+    <button class="modern-outline" type="button" data-go="legacy">旧画面で単語一覧を使う</button>
+  </section>
+  <section class="modern-page" data-screen="cards" hidden>
+    <div class="modern-eyebrow">FLASHCARDS</div><h1>カード</h1><p class="modern-subtitle">暗記学習の新画面を準備中</p>
+    <div class="modern-empty"><span>▣</span><strong>フラッシュカード</strong><p>次の工程で既存のカード学習機能を接続します。</p></div>
+    <button class="modern-outline" type="button" data-go="legacy">旧画面でカード学習を使う</button>
+  </section>
+</main>
+<nav id="study-bottom-nav" aria-label="画面切り替え">
+  <button type="button" class="study-nav-item is-active" data-tab="legacy" aria-current="page"><span class="study-nav-icon">▤</span><span>旧画面</span></button>
+  <button type="button" class="study-nav-item" data-tab="home"><span class="study-nav-icon">⌂</span><span>ホーム</span></button>
+  <button type="button" class="study-nav-item" data-tab="list"><span class="study-nav-icon">☷</span><span>リスト</span></button>
+  <button type="button" class="study-nav-item" data-tab="cards"><span class="study-nav-icon">▣</span><span>カード</span></button>
+</nav>
+<script src="navigation.js"></script>
+
+</body>
+</html>

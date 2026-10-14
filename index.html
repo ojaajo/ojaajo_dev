@@ -1,375 +1,355 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="ja">
-<head><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&amp;display=swap" rel="stylesheet"/>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>韓国語単語暗記ツール</title>
-<link rel="stylesheet" href="style.css">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<title>韓国語単語暗記ツール | 新UI試作</title>
+<style>
+:root{color-scheme:dark;--bg:#111318;--panel:#1a1d24;--panel2:#222630;--line:#303540;--text:#f4f5f7;--muted:#9ba2b0;--accent:#b7f36b;--accent-ink:#17200c;--red:#ff8585}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans JP","Apple SD Gothic Neo",system-ui,sans-serif;font-size:15px;line-height:1.55}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:0}
+.app{max-width:760px;min-height:100dvh;margin:auto;padding:0 18px 100px}
+header{padding:26px 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-size:17px;font-weight:800;letter-spacing:-.03em}.brand span{color:var(--accent)}
+.eyebrow{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+h1{font-size:29px;line-height:1.25;letter-spacing:-.05em;margin:8px 0 8px}
+h2{font-size:19px;margin:0 0 14px;letter-spacing:-.03em}
+h3{font-size:15px;margin:0 0 8px}
+p{margin:0;color:var(--muted)}
+.page{display:none}.page.active{display:block}body:has(.page:target) .page.active{display:none}.page:target{display:block}body:has(#list:target) #listIndexView{display:block}a.nav-btn{text-decoration:none}body:has(#list:target) .nav-btn[data-page="list"],body:has(#cards:target) .nav-btn[data-page="cards"],body:has(#settings:target) .nav-btn[data-page="settings"]{color:var(--accent);background:#282e25}
+.hero{padding:23px;border-radius:24px;background:linear-gradient(135deg,#252b34,#1a1d24 72%);border:1px solid #353b46;margin-bottom:22px}
+.hero p{max-width:420px}.tag{display:inline-flex;padding:5px 9px;border-radius:999px;background:#333b2c;color:var(--accent);font-size:11px;font-weight:700;margin-bottom:9px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:7px;margin:14px 0}
+label{font-size:12px;color:var(--muted);font-weight:700}
+input,select,textarea{width:100%;border:1px solid var(--line);background:#11141a;color:var(--text);border-radius:12px;padding:12px 13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.row{display:flex;align-items:center;gap:10px}.row>*{flex:1;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:12px 15px;font-weight:750;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.subtle{background:transparent}.btn.danger{color:var(--red)}
+.btn:active{transform:scale(.99)}
+.full{width:100%}.small{padding:7px 10px;font-size:12px;border-radius:9px}
+.muted{color:var(--muted)}.tiny{font-size:12px}.space{height:10px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 12px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.stat{padding:13px;border-radius:15px;background:#171a20;border:1px solid var(--line)}
+.stat strong{display:block;font-size:22px;letter-spacing:-.04em}.stat span{font-size:11px;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.toolbar .btn{flex:1;min-width:105px}
+/* Keep the selected list's heading and display controls visible while scrolling. */
+.word-list-sticky{position:sticky;top:0;z-index:20;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.word-list-sticky .section-head{margin:4px 0 12px}
+.word-list-sticky .toolbar{margin-bottom:0}
+.word-list-sticky .word-detail-controls{margin-bottom:0}
+.word-list{display:flex;flex-direction:column;gap:9px}
+.list-index{display:flex;flex-direction:column;gap:10px}
+.list-index-card{display:flex;align-items:center;gap:13px;width:100%;padding:15px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;color:var(--text)}
+.list-index-card:active{transform:scale(.99)}
+.list-index-icon{width:48px;height:48px;display:grid;place-items:center;flex-shrink:0;border-radius:50%;background:conic-gradient(var(--accent) 0 33%, #404740 33% 66%, #252b28 66% 100%);color:var(--text);font-size:11px;font-weight:700;position:relative}.list-index-icon::before{content:"";position:absolute;inset:6px;background:var(--panel);border-radius:50%}.list-index-icon span{position:relative;z-index:1}
+.list-index-copy{flex:1;min-width:0}
+.list-index-copy strong{display:block;font-size:15px;overflow-wrap:anywhere}
+.list-index-copy small{display:block;margin-top:3px;color:var(--muted);font-size:12px} 
+.list-index-arrow{color:var(--muted);font-size:23px}
+.list-progress{height:6px;background:#30352f;border-radius:999px;overflow:hidden;margin-top:10px;width:100%}.list-progress-fill{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .2s}.list-progress-detail{display:flex;justify-content:space-between;gap:8px;margin-top:6px;color:var(--muted);font-size:11px}.list-index-copy{min-width:0}.detail-status-options{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.detail-status-options label{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12px}.detail-status-options input{accent-color:var(--accent)}.detail-subhead{font-size:12px;color:var(--muted);margin-top:13px;margin-bottom:6px}.detail-panel{background:var(--panel2);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px}
+.word{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:14px}
+.word-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.korean{font-size:19px;font-weight:800;letter-spacing:-.03em;overflow-wrap:anywhere}
+.meaning{margin-top:3px;color:#c2c7d0}.hidden-text{font-size:0!important;user-select:none}.hidden-text::after{content:"…";font-size:18px;color:var(--muted)}
+.status{white-space:nowrap;font-size:11px;border-radius:999px;padding:5px 8px;background:#30343c;color:#c8ced8}
+.status.known{background:#293a22;color:var(--accent)}.status.unknown{background:#3a2929;color:var(--red)}
+.word-actions{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.word-actions .btn{padding:7px 10px;font-size:12px}
+.example{margin-top:12px;padding:11px 12px;border-radius:12px;background:#14171d;border:1px solid #292e37;font-size:13px}
+.example strong{display:block;color:var(--accent);font-size:11px;margin-bottom:4px}
+.card-stage{min-height:340px;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:24px}
+.card-korean{font-size:clamp(28px,7vw,43px);font-weight:850;letter-spacing:-.05em;margin:22px 0 10px;overflow-wrap:anywhere}
+.card-meaning{font-size:19px;min-height:32px;color:#c9ced7}
+.card-example{margin-top:22px;padding:14px;border-radius:14px;background:#15181e;text-align:left}
+.card-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.bottom-nav{position:fixed;z-index:5;bottom:0;left:0;right:0;background:rgba(17,19,24,.94);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:9px 12px calc(9px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+.nav-inner{display:grid;grid-template-columns:repeat(4,1fr);width:min(760px,100%);gap:5px}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;color:var(--muted);padding:7px 3px;border-radius:12px;font-size:11px;font-weight:700}
+.nav-btn .ico{font-size:18px;line-height:1.2}.nav-btn.active{background:#282e25;color:var(--accent)}
+.notice{padding:12px;border:1px dashed #444b58;border-radius:13px;color:var(--muted);font-size:12px}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.cloud-panel{background:linear-gradient(135deg,#1d2420,#1a1d24 72%)}
+.cloud-head{display:flex;align-items:center;gap:12px;margin-bottom:15px}
+.cloud-icon{width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;border-radius:13px;background:#303b29;color:var(--accent);font-size:23px}
+.cloud-copy{flex:1;min-width:0}.cloud-copy h2{margin:0 0 3px}.cloud-copy p{font-size:12px}
+.action-card{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:16px;margin-bottom:10px;border-radius:17px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+.action-card:active{transform:scale(.99)}
+.action-icon{width:43px;height:43px;display:grid;place-items:center;flex-shrink:0;border-radius:13px;background:#303b29;color:var(--accent);font-size:24px}
+.action-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.action-copy strong{font-size:14px}.action-copy small{font-size:12px;color:var(--muted)}
+.action-arrow{font-size:25px;color:var(--muted)}
+.choice-list{display:grid;gap:10px;margin-top:18px}
+.choice-btn{display:flex;align-items:center;gap:12px;width:100%;padding:15px;text-align:left;background:#222630;border:1px solid var(--line);border-radius:14px;color:var(--text)}
 
+.word-top{align-items:flex-start}
+.word-menu-wrap{position:relative;flex-shrink:0}
+.word-menu-trigger{width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:10px;background:#242832;color:var(--text);font-size:22px;line-height:1}
+.word-menu{position:absolute;right:0;top:39px;z-index:10;min-width:145px;padding:6px;background:#252932;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px #0008}
+.word-menu button{display:block;width:100%;padding:10px;text-align:left;border:0;border-radius:8px;background:transparent;color:var(--text);font-size:13px}
+.word-menu button:active{background:#353a45}
+.word-menu button.danger{color:#ff8989}
+.choice-btn .choice-symbol{font-size:21px;color:var(--accent);width:26px;text-align:center}
+.choice-btn strong{display:block;font-size:14px}.choice-btn small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 
-<!-- Supabase接続設定 -->
+@media(min-width:600px){.app{padding-left:26px;padding-right:26px}.hero{padding:30px}.panel{padding:22px}.word{padding:16px}}
+[hidden]{display:none!important}\n.bottom-nav{z-index:100}\n
+/* JavaScriptが無効なプレビューでも単語一覧を開ける */
+[hidden]{display:none!important}
+body:has(#word-detail:target) .page.active,body:has(#word-detail:target) #list{display:none!important}
+body:has(#word-detail:target) #word-detail{display:block!important}
+body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);background:#282e25}
+.word-detail-controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.word-detail-controls label{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 12px;color:var(--text);font-size:12px}
+.word-detail-controls input{width:auto;accent-color:var(--accent)}
+#word-detail:has(#hide-ko:checked) .korean{font-size:0;user-select:none}
+#word-detail:has(#hide-ko:checked) .korean::after{content:"…";font-size:18px;color:var(--muted)}
+#word-detail:has(#hide-ja:checked) .meaning{font-size:0;user-select:none}
+#word-detail:has(#hide-ja:checked) .meaning::after{content:"…";font-size:18px;color:var(--muted)}
+.word-detail-static .word{margin:10px 0}
+.word-detail-static details{margin-top:10px}
+.word-detail-static summary{cursor:pointer;color:var(--accent);font-size:13px}
+.word-detail-static .word-top{align-items:flex-start}
+.word-detail-static .example{margin-top:9px}
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+.shuffle-control{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;background:var(--panel2);font-size:12px;white-space:nowrap}.shuffle-control input{accent-color:var(--accent)}
 
-<script src="supabase.js"></script>
+.compact-head{padding:9px 0 10px}.compact-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}.compact-top strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}.compact-top .btn{flex-shrink:0}.range-summary{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:11px;color:var(--text);padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;text-align:left}.range-summary span:nth-child(2){margin-left:auto;color:var(--muted);font-size:12px}.range-panel{padding:12px 2px 3px}.range-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.range-fields label{display:flex;flex-direction:column;gap:5px}.range-fields select{padding:9px}.setting-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}.setting-choices label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text)}.setting-choices input{width:auto;accent-color:var(--accent)}[hidden]{display:none!important}
+.detail-toggle{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+#staticRangeDialog{display:none!important}
+#detailSettingsToggle:checked + #staticRangeDialog{display:block!important}
+ .card-settings label{display:flex;align-items:center;gap:9px;min-width:0;white-space:normal} .card-settings input{flex-shrink:0;width:19px;height:19px} #cardListView,#cardSetupView,#cardQuizView{max-width:680px;margin:auto} body:has(#card-setup-fallback:target) .page,body:has(#card-quiz-fallback:target) .page{display:none!important}body:has(#card-setup-fallback:target) #cards,body:has(#card-quiz-fallback:target) #cards{display:block!important}body:has(#card-setup-fallback:target) #cardListView,body:has(#card-quiz-fallback:target) #cardListView{display:block!important}#card-setup-fallback:target,#card-quiz-fallback:target{display:block!important}body:has(#card-setup-fallback:target) #cardListChoices,body:has(#card-quiz-fallback:target) #cardListChoices{display:none!important}body:has(#card-quiz-fallback:target) #card-setup-fallback{display:none!important}.list-index-card{text-decoration:none;color:var(--text)}
+</style>
+<style>
+/* Supabase cloud control stays above the new bottom navigation */
+#sb-cloud-toggle{bottom:calc(85px + env(safe-area-inset-bottom))!important;right:14px!important}
+#staticWordRows{display:none}
+#word-detail{display:none!important}
+#word-detail:target{display:none!important}
+#listWordsView .word-list{padding-bottom:20px}
+</style>
 </head>
 <body>
-<div id="legacy-workspace">
+<div class="app">
 <header>
-<h1>韓国語単語暗記ツール</h1>
+  <div><div class="brand">OJAAJO <span>•</span> KOREAN</div><div class="eyebrow">VOCABULARY WORKSPACE</div></div>
+  <button class="btn small subtle" onclick="go('settings')">⚙ 設定</button>
 </header>
-<div class="container">
-<!-- 出題範囲選択 -->
-<div class="section" id="range-selection"><h3>📋 単語一覧表示</h3><button id="word-list-show-btn">単語一覧を見る</button>
-<div class="form-group">
-<label for="wordlist-level-select">難易度:</label>
-<select class="level-select" id="wordlist-level-select">
-<option value="beginner">初級</option>
-<option value="intermediate">中級</option>
-<option value="advanced">上級</option>
-<option value="expressionup">表現力UP</option>
-<option value="Level4">語学堂4級単語</option>
-<option value="Level5">語学堂5級単語</option>
-</select>
-</div>
-<div class="form-group">
-<label>表示ページ:</label>
-<div class="page-range">
-<select id="wordlist-start-page"></select>
-<span>～</span>
-<select id="wordlist-end-page"></select>
-</div>
-</div>
-<div class="checkbox-group">
-<label><input id="wordlist-shuffle" type="checkbox"/> 単語をランダムに並び替えて表示</label>
-</div>
-<h3>🃏 フラッシュカード出題</h3><button onclick="startQuiz()">フラッシュカード開始</button>
-<div class="form-group">
-<label for="quiz-level-select">難易度:</label>
-<select class="level-select" id="quiz-level-select">
-<option value="beginner">初級</option>
-<option value="intermediate">中級</option>
-<option value="advanced">上級</option>
-<option value="expressionup">表現力UP</option>
-<option value="Level4">語学堂4級単語</option>
-<option value="Level5">語学堂5級単語</option>
-</select>
-</div>
-<div class="form-group">
-<label>出題ページ:</label>
-<div class="page-range">
-<select id="start-page"></select>
-<span>～</span>
-<select id="end-page"></select>
-</div>
-</div>
-<div class="checkbox-group">
-<label><input id="only-incorrect" type="checkbox"/> 未暗記のみ出題</label>
-<label><input id="auto-speak" onchange="toggleAutoSpeak()" type="checkbox"/> 音声再生ON</label>
-</div>
 
-
-<div id="custom-list-import" style="margin: 15px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-  <h3>📥 自分の単語リスト</h3>
-
-  <label for="custom-list-destination">登録先：</label>
-  <select id="custom-list-destination" style="display: block; width: 100%; margin: 8px 0 12px; padding: 8px;">
-    <option value="new">新しいリストを作成</option>
-  </select>
-
-  <div id="custom-list-name-area">
-    <label for="custom-list-name">新しいリストの名前：</label>
-    <input
-      id="custom-list-name"
-      type="text"
-      placeholder="例：韓国語表現・第1回"
-      style="display: block; box-sizing: border-box; width: 100%; margin: 8px 0 12px; padding: 8px;"
-    />
+<main>
+<section class="page active" id="home">
+  <div class="hero">
+    <span class="tag">VOCABULARY WORKSPACE</span>
+    <h1>単語を整理して、<br>学習につなげる。</h1>
+    <p>単語の登録・リスト管理・クラウド接続をここから行えます。</p>
+    <div class="stat-grid">
+      <div class="stat"><strong id="homeWordCount">—</strong><span>登録単語</span></div>
+      <div class="stat"><strong id="homeListCount">—</strong><span>単語リスト</span></div>
+      <div class="stat"><strong id="homeKnownCount">—</strong><span>暗記済み</span></div>
+    </div>
   </div>
 
-  <label for="custom-list-file">単語リスト（.txt）：</label>
-  <input
-    id="custom-list-file"
-    type="file"
-    accept=".txt,text/plain"
-    style="display: block; margin: 10px 0;"
-  />
-
-  <p style="font-size: 13px; color: #666;">
-    1行に1単語ずつ「韓国語:日本語の意味」の形式で記載してください。<br>
-    1ページ80語で自動的にページ分けします。
-  </p>
-
-  <button id="custom-list-import-btn" type="button">
-    単語リストを読み込む
-  </button>
-
-  <p id="custom-list-import-message" role="status"></p>
-</div>
-
-
-<div>
-<button onclick="exportProgress()">暗記状況を保存</button>
-<input accept=".json" id="import-file" onchange="importProgress(event)" style="display:none;" type="file"/>
-<button onclick="document.getElementById('import-file').click()">暗記状況を読み込む</button>
-<div id="toast" style="
-  display: none;
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #ff4d4d;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  font-size: 0.9em;
-  z-index: 9999;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-"></div>
-</div>
-</div>
-<!-- 出題セクション -->
-<div class="section hidden" id="quiz-section">
-<!-- 進行状況と戻るボタンを横並びにするためのコンテナ -->
-<div class="progress-container">
-<span>進行状況: <span id="progress">0/0</span></span>
-<button onclick="showRangeSelection()">🏠ホーム</button>
-</div>
-<div id="card">
-<div id="word-container">
-<div id="word-wrapper">
-<span id="word">ここに単語が表示されます</span>
-<span id="speaker-icon" onclick="playWord(document.getElementById('word').textContent)">📢</span>
-</div>
-</div>
-<div id="meaning">（意味が表示されます）</div>
-</div>
-<div class="button-container">
-<button id="incorrect-btn" onclick="markAnswer(false)">×</button>
-<button id="correct-btn" onclick="markAnswer(true)">⚪︎</button>
-<button id="next-btn" onclick="nextQuestion()" style="display: none;">次へ</button>
-</div>
-<!-- ここに黒線と矢印ボタンを配置 -->
-<div class="line-container">
-<div class="black-line"></div> <!-- 薄い黒線 -->
-<div class="arrows-container">
-<button id="prev-btn" onclick="moveToPrevious()">←</button>
-<button id="next-btn" onclick="moveToNext()">→</button>
-</div>
-</div>
-<p id="result"></p>
-</div>
-<!-- 単語一覧表示 -->
-<div class="table-container hidden" id="word-list">
-<div class="word-list-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-  <h2 style="margin: 0;">単語一覧</h2>
-
-  <div style="display: flex; align-items: center; gap: 4px;">
-    <button
-      id="word-list-menu-btn"
-      type="button"
-      aria-label="単語リストの管理"
-      title="単語リストの管理"
-      style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; color: inherit; border: none; box-shadow: none; cursor: pointer;"
-    >
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
-        <circle cx="5" cy="12" r="1.7"></circle>
-        <circle cx="12" cy="12" r="1.7"></circle>
-        <circle cx="19" cy="12" r="1.7"></circle>
-      </svg>
-    </button>
-
-    <button
-      id="word-list-search-btn"
-      type="button"
-      aria-label="単語を検索"
-      title="単語を検索"
-      style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; color: inherit; border: none; box-shadow: none; cursor: pointer;"
-    >
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="10.8" cy="10.8" r="6.5"></circle>
-        <path d="m16 16 4.2 4.2"></path>
-      </svg>
-    </button>
+  <div class="panel cloud-panel">
+    <div class="cloud-head">
+      <div class="cloud-icon">☁</div>
+      <div class="cloud-copy"><h2>クラウド同期</h2><p id="cloudStatusText">接続を確認しています…</p></div>
+      <span class="status" id="cloudStatusBadge">未接続</span>
+    </div>
+    <button class="btn full" onclick="go('settings')">ログイン・同期の状態を確認　→</button>
+    <p class="tiny" style="margin-top:10px">右下の☁️ボタンからログイン・ログアウトできます。</p>
   </div>
-</div>
 
-<!-- 単語リスト管理メニュー -->
-<div id="word-list-menu" hidden
-  style="position: absolute; right: 24px; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); min-width: 180px; padding: 6px;">
-
-  <button type="button" class="word-list-menu-item" data-action="add-word"
-    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
-    単語を追加
+  <div class="section-head"><div><div class="eyebrow">WORD MANAGEMENT</div><h2 style="margin:5px 0 0">単語の管理</h2></div></div>
+  <button class="action-card" onclick="openActionChooser()">
+    <span class="action-icon">＋</span>
+    <span class="action-copy"><strong>単語を追加・インポート</strong><small>1語ずつ追加、まとめて登録</small></span>
+    <span class="action-arrow">›</span>
   </button>
-
-  <button type="button" class="word-list-menu-item" data-action="edit-word"
-    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
-    単語を編集
+  <button class="action-card" onclick="openCreateList()">
+    <span class="action-icon">▤</span>
+    <span class="action-copy"><strong>新しいリストを作成</strong><small>自分用の単語リストを用意する</small></span>
+    <span class="action-arrow">›</span>
   </button>
+  <p class="tiny muted" style="margin:14px 2px 0">登録・編集機能は移行中です。<a href="legacy.html" style="color:var(--accent)">旧画面を開く</a></p>
+</section>
 
-  <button type="button" class="word-list-menu-item" data-action="delete-word"
-    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
-    単語を削除
-  </button>
-
-  <div style="height: 1px; background: #e5e5e5; margin: 6px 4px;"></div>
-
-  <button type="button" class="word-list-menu-item" data-action="edit-list"
-    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
-    リスト名を編集
-  </button>
-
-  <button type="button" class="word-list-menu-item" data-action="delete-list"
-    style="display: block; width: 100%; text-align: left; background: transparent; color: inherit; box-shadow: none; border-radius: 6px; margin: 0; padding: 12px;">
-    リストを削除
-  </button>
-
-</div>
-
-<!-- 単語検索欄 -->
-<div id="word-search-area" hidden
-  style="display: none; margin: 0 0 12px 0;">
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <input
-      id="word-search-input"
-      type="search"
-      placeholder="韓国語・日本語で検索"
-      autocomplete="off"
-      style="flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px;"
-    >
-    <button
-      id="word-search-clear-btn"
-      type="button"
-      aria-label="検索を閉じる"
-      title="検索を閉じる"
-      style="background: transparent; color: inherit; border: none; box-shadow: none; padding: 8px; font-size: 20px; cursor: pointer;"
-    >×</button>
+<section class="page" id="list">
+  <div id="listIndexView">
+    <div class="section-head"><div><div class="eyebrow">WORD LIBRARY</div><h1>単語リスト</h1></div><button class="btn small" onclick="openCreateList()">＋ 新規作成</button></div>
+    <p class="tiny" style="margin-bottom:14px">リストを選ぶと、そのリストの単語一覧が開きます。</p>
+    <div class="list-index" id="listIndex">
+      <a class="list-index-card" href="#word-detail"><span class="list-index-icon"><span>33%</span></span><span class="list-index-copy"><strong>初級</strong><small>6語 ・ 暗記済み 2語</small><span class="list-progress"><span class="list-progress-fill" style="width:33.3%"></span></span><span class="list-progress-detail"><span>進捗 33%</span><span>2 / 6語</span></span></span><span class="list-index-arrow">›</span></a>
+      <a class="list-index-card" href="#word-detail"><span class="list-index-icon"><span>33%</span></span><span class="list-index-copy"><strong>中級</strong><small>6語 ・ 暗記済み 2語</small><span class="list-progress"><span class="list-progress-fill" style="width:33.3%"></span></span><span class="list-progress-detail"><span>進捗 33%</span><span>2 / 6語</span></span></span><span class="list-index-arrow">›</span></a>
+      <a class="list-index-card" href="#word-detail"><span class="list-index-icon"><span>33%</span></span><span class="list-index-copy"><strong>上級</strong><small>6語 ・ 暗記済み 2語</small><span class="list-progress"><span class="list-progress-fill" style="width:33.3%"></span></span><span class="list-progress-detail"><span>進捗 33%</span><span>2 / 6語</span></span></span><span class="list-index-arrow">›</span></a>
+      <a class="list-index-card" href="#word-detail"><span class="list-index-icon"><span>33%</span></span><span class="list-index-copy"><strong>表現力</strong><small>6語 ・ 暗記済み 2語</small><span class="list-progress"><span class="list-progress-fill" style="width:33.3%"></span></span><span class="list-progress-detail"><span>進捗 33%</span><span>2 / 6語</span></span></span><span class="list-index-arrow">›</span></a>
+      <a class="list-index-card" href="#word-detail"><span class="list-index-icon"><span>33%</span></span><span class="list-index-copy"><strong>自作リスト（デモ）</strong><small>6語 ・ 暗記済み 2語</small><span class="list-progress"><span class="list-progress-fill" style="width:33.3%"></span></span><span class="list-progress-detail"><span>進捗 33%</span><span>2 / 6語</span></span></span><span class="list-index-arrow">›</span></a>
+    </div>
+    <div class="space"></div>
+    <button class="btn full" onclick="openImport()">⇧ 単語をインポート</button>
   </div>
-  <div id="word-search-count"
-    style="font-size: 13px; margin-top: 6px; color: #666;"></div>
-</div>
-
-<!-- 単語進捗サマリー -->
-<div id="word-summary" class="word-summary">
-  <div class="status-group">
-    <label class="status-item green">
-      <input type="checkbox" id="hide-correct" >
-      暗記済 <b>0</b>
-    </label>
-    <label class="status-item red">
-      <input type="checkbox" id="hide-incorrect" >
-      未暗記 <b>0</b>
-    </label>
-    <label class="status-item gray">
-      <input type="checkbox" id="hide-unattempted" >
-      未解答 <b>0</b>
-    </label>
+  <div id="listWordsView" hidden>
+    <div class="word-list-sticky compact-head">
+      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
+      <button type="button" class="range-summary" onclick="togglePageRange()"><span>▤ <span id="rangeSummary">1〜1ページ</span></span><span id="rangeWordCount">6語</span><span>⌄</span></button>
+      <div class="range-panel" id="pageRangePanel" hidden><div class="range-fields"><label>開始ページ<select id="startPage" onchange="validatePageRange('start')"></select></label><label>終了ページ<select id="endPage" onchange="validatePageRange('end')"></select></label></div><button class="btn primary full small" onclick="applyPageRange()">この範囲を表示</button></div>
+      <div class="range-panel" id="listSettingsPanel" hidden><div class="setting-choices"><label><input type="checkbox" id="settingKo" checked onchange="setListVisibility('ko',this.checked)"> 韓国語を表示</label><label><input type="checkbox" id="settingJa" checked onchange="setListVisibility('ja',this.checked)"> 日本語を表示</label><label><input type="checkbox" id="shuffleWords" onchange="toggleWordShuffle(this.checked)"> ランダム表示</label><label><input type="checkbox" id="settingExamples" onchange="setListExamples(this.checked)"> 例文を表示</label><label><input type="checkbox" class="dynamicStatusFilter" value="known" checked onchange="renderWords()"> 暗記済み</label><label><input type="checkbox" class="dynamicStatusFilter" value="unseen" checked onchange="renderWords()"> 未確認</label><label><input type="checkbox" class="dynamicStatusFilter" value="unknown" checked onchange="renderWords()"> 未暗記</label></div></div>
+    </div>
+    <p class="tiny" id="selectedListSummary"></p>
+    <div class="field"><input id="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()"></div>
+    <div class="word-list" id="wordList"></div>
+    <div class="space"></div>
+    <button class="btn full" onclick="openImport()">⇧ このリストに単語をインポート</button>
   </div>
-  <div class="summary-total">
-    / 合計 <b>0</b>
-  </div>
-  <div class="progress-bar">
-    <div id="bar-done" class="bar green"></div>
-    <div id="bar-not" class="bar red"></div>
-    <div id="bar-none" class="bar gray"></div>
-  </div>
-</div>
-<div class="scrollable-table" id="scrollable-table" tabindex="0">
-<table>
-<thead>
-<tr>
-<th>
-                                単語
-                                <label>
-<input id="toggle-korean" onchange="toggleKorean()" type="checkbox"/> 
-                                </label>
-</th>
-<th>
-                                意味
-                                <label>
-<input id="toggle-meaning" onchange="toggleMeaning()" type="checkbox"/> 
-                                </label>
-</th>
-<th>暗記状況</th>
-</tr>
-</thead>
-<tbody id="word-list-body">
-<!-- 動的に生成される内容 -->
-</tbody>
-</table>
-</div>
-<div class="word-list-controls">
-<button onclick="showRangeSelection()">🏠ホーム</button>
-<div class="word-list-buttons">
-<button id="up-button" onclick="playPreviousWord()">↑</button>
-<button id="down-button" onclick="playNextWord()">↓</button>
-<button id="repeat-button" onclick="repeatLastWord()">♻︎</button>
-</div>
-</div>
-</div>
-<!-- モーダル -->
-<div class="modal hidden" id="quiz-modal">
-<div class="modal-content">
-<p id="modal-message">前回途中で終了したクイズがあります。再開しますか？※Noを選択すると履歴がリセットされます。</p>
-<div class="modal-buttons">
-<button id="modal-no">No</button>
-<button id="modal-yes">Yes</button>
-</div>
-</div>
-</div>
-<div class="hidden" id="toast"></div><div class="hidden" id="json-output" style="margin-top:20px;"><p>🔒 進捗データを下からコピーして、メモ帳やiCloud Driveに貼り付けて保存してください。</p><textarea id="json-text" readonly="" rows="10" style="width:100%; font-family: monospace; font-size:14px;"></textarea><button onclick="copyToClipboard()" style="margin-top: 10px;">コピーする</button></div>
+</section>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').then(() => {
-      console.log("Service Worker registered");
-    });
-  });
-}
-</script>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4CAF50">
-<script src="words.js"></script>
-<script src="app.js"></script>
-</div>
-</div><!-- /legacy-workspace -->
-<main id="modern-workspace" hidden aria-label="新しい学習画面">
-  <section class="modern-page" data-screen="home">
-    <div class="modern-eyebrow">YOUR STUDY SPACE</div>
-    <h1>ホーム</h1>
-    <p class="modern-subtitle">今日も少しずつ、覚えていこう。</p>
-    <div class="modern-feature"><span class="modern-feature-icon">✦</span><div><strong>韓国語の学習</strong><p id="modern-home-overview">学習状況を読み込んでいます…</p></div></div>
-    <h2>単語リスト</h2>
-    <p id="modern-home-status" class="modern-home-status" role="status" aria-live="polite">読み込み中…</p>
-    <div id="modern-home-lists" class="modern-home-lists"></div>
-    <h2>学習メニュー</h2>
-    <button class="modern-action" type="button" data-go="list"><span>☷</span><span><strong>単語リスト</strong><small>単語一覧を開く</small></span><span>›</span></button>
-    <button class="modern-action" type="button" data-go="cards"><span>▣</span><span><strong>フラッシュカード</strong><small>カード画面を開く</small></span><span>›</span></button>
-    <div class="modern-note">単語リストと暗記状況を表示しています。単語の編集・学習は引き続き旧画面から利用できます。</div>
-  </section>
-  <section class="modern-page" data-screen="list" hidden>
-    <div class="modern-eyebrow">VOCABULARY</div><h1>リスト</h1><p class="modern-subtitle">単語一覧の新画面を準備中</p>
-    <div class="modern-empty"><span>☷</span><strong>単語リスト</strong><p>次の工程でSupabaseのリストを表示できるようにします。</p></div>
-    <button class="modern-outline" type="button" data-go="legacy">旧画面で単語一覧を使う</button>
-  </section>
-  <section class="modern-page" data-screen="cards" hidden>
-    <div class="modern-eyebrow">FLASHCARDS</div><h1>カード</h1><p class="modern-subtitle">暗記学習の新画面を準備中</p>
-    <div class="modern-empty"><span>▣</span><strong>フラッシュカード</strong><p>次の工程で既存のカード学習機能を接続します。</p></div>
-    <button class="modern-outline" type="button" data-go="legacy">旧画面でカード学習を使う</button>
-  </section>
+
+
+<section class="page" id="cards">
+ <div id="cardListView">
+  <div class="section-head"><div><div class="eyebrow">FLASH CARDS</div><h1>カード学習</h1></div></div>
+  <p class="tiny">学習するリストを選択してください。</p>
+  <div id="cardListChoices" class="list-index"><a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('beginner');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>初級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
+<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('intermediate');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>中級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
+<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('advanced');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>上級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
+<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('expressionup');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>表現力</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
+<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('custom');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>自作リスト（デモ）</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a></div>
+ </div>
+ <div id="card-setup-fallback" class="panel" style="display:none;margin-top:14px">
+  <h2>クイズ設定</h2><p class="tiny">表示範囲（1ページ＝80語）</p>
+  <div class="range-fields"><label>開始ページ<select><option>1ページ</option></select></label><label>終了ページ<select><option>1ページ</option></select></label></div>
+  <p class="tiny">出題するステータス</p><div class="setting-choices"><label><input type="checkbox" checked> 暗記済み</label><label><input type="checkbox" checked> 未確認</label><label><input type="checkbox" checked> 未暗記</label></div>
+  <div class="setting-choices" style="margin-top:14px"><label><input type="checkbox" checked> ランダム出題</label><label><input type="checkbox"> 音声再生</label></div>
+  <p class="tiny" style="margin-top:12px">プレビュー用の設定です。サンプルクイズで画面遷移を確認できます。</p>
+  <a href="#card-quiz-fallback" class="btn primary full" style="display:block;text-align:center;text-decoration:none;margin:12px 0">クイズを開始 →</a>
+  <a href="#cards" class="btn small" style="display:inline-block;margin-top:12px">← リストに戻る</a>
+ </div>
+ <div id="card-quiz-fallback" class="panel" style="display:none;margin-top:14px;text-align:center">
+  <div class="eyebrow">FLASH CARDS · 1 / 4</div>
+  <h2 style="margin:38px 0 12px;font-size:30px">가볍다</h2>
+  <details style="margin:25px 0"><summary class="btn primary full" style="cursor:pointer;list-style:none">意味を表示</summary><p style="padding:18px">軽い</p></details>
+  <p class="tiny">これは画面遷移確認用のサンプルカードです。暗記状態の保存は行われません。</p>
+  <a href="#card-setup-fallback" class="btn full" style="display:block;text-decoration:none;margin-top:18px">← クイズ設定に戻る</a>
+ </div>
+ <div id="cardSetupView" hidden>
+  <div class="section-head"><div><button class="btn small subtle" onclick="showCardLists()">← リスト選択</button><div class="eyebrow" style="margin-top:12px">QUIZ SETTINGS</div><h1 id="cardSetupTitle">クイズ設定</h1></div></div>
+  <div class="panel" style="display:grid;gap:17px">
+   <div><div class="tiny muted">表示範囲（1ページ＝80語）</div><div class="range-fields"><label>開始ページ<select id="cardStartPage" onchange="validateCardPages('start')"></select></label><label>終了ページ<select id="cardEndPage" onchange="validateCardPages('end')"></select></label></div></div>
+   <div><div class="tiny muted" style="margin-bottom:8px">出題するステータス（複数選択可）</div><div class="setting-choices card-settings"><label><input class="card-status" type="checkbox" value="known" checked onchange="updateCardEstimate()"> 暗記済み</label><label><input class="card-status" type="checkbox" value="unseen" checked onchange="updateCardEstimate()"> 未確認</label><label><input class="card-status" type="checkbox" value="unknown" checked onchange="updateCardEstimate()"> 未暗記</label></div></div>
+   <div class="setting-choices card-settings"><label><input id="cardShuffle" type="checkbox" checked> ランダム出題</label><label><input id="cardAutoVoice" type="checkbox"> 出題時に韓国語の音声を再生</label></div>
+   <p class="tiny" id="cardEstimatedCount">出題予定：4語</p>
+   <button class="btn primary full" onclick="startCardQuiz()">クイズを開始 →</button>
+  </div>
+ </div>
+ <div id="cardQuizView" hidden>
+  <div class="section-head"><div><button class="btn small subtle" onclick="showCardSetup()">← クイズ設定</button><div class="eyebrow" style="margin-top:10px" id="cardListName">初級</div></div><span class="status" id="cardCounter">1 / 4</span></div>
+  <div class="panel card-stage">
+    <div class="eyebrow" id="cardListName">初級</div>
+    <div class="card-korean" id="cardKorean">가볍다</div>
+    <div class="card-meaning" id="cardMeaning">軽い</div>
+    <div class="card-example" id="cardExample" hidden><strong>例文</strong><div id="cardExampleText"></div><div class="muted tiny" id="cardExampleMeaning" style="margin-top:5px"></div></div>
+    <div class="space"></div>
+    <button class="btn full" onclick="revealMeaning()" id="revealBtn">意味を表示する</button>
+    <button class="btn subtle full" style="margin-top:8px" onclick="toggleCardExample()">例文を表示／非表示</button>
+  </div>
+  <div class="card-controls">
+    <button class="btn" onclick="markCard(false)">×　未暗記</button>
+    <button class="btn primary" onclick="markCard(true)">✓　暗記済み</button>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn" onclick="prevCard()">← 前へ</button>
+    <button class="btn" onclick="nextCard()">次へ →</button>
+  </div>
+  <p class="tiny" style="margin-top:12px">意味は次のカードに移ると自動で隠れます。暗記状態は試作内のみです。</p>
+ </div>
+</section>
+
+<section class="page" id="settings">
+  <div class="section-head"><div><div class="eyebrow">PREFERENCES</div><h1>設定</h1></div></div>
+  <div class="panel">
+    <h2>クラウド同期</h2>
+    <p>ログイン・ログアウトは右下の☁️ボタンから操作できます。</p>
+    <div class="divider"></div>
+    <div class="row"><span class="muted">接続状態</span><span class="status">接続確認中</span></div>
+    <div class="space"></div><button class="btn full" onclick="document.getElementById('sb-cloud-toggle')?.click()">クラウド設定を開く</button>
+    <div class="notice" style="margin-top:12px">既存のSupabaseアカウントと接続します。</div>
+  </div>
+  <div class="panel">
+    <h2>リストの管理</h2>
+    <button class="btn full" onclick="openImport()">＋ リストを作成／単語をインポート</button>
+    <p class="tiny" style="margin-top:10px">「新しいリストを作成」または「既存リストに追加」を選ぶUIを本番接続時に実装します。</p>
+  </div>
+  <div class="panel">
+    <h2>学習画面</h2>
+    <p>・リストでは韓国語と日本語を別々に表示／非表示</p>
+    <p>・カードでは意味と例文を独立して表示／非表示</p>
+    <p>・暗記済み／未暗記の状態を単語ごとに管理</p>
+  </div>
+</section>
 </main>
-<nav id="study-bottom-nav" aria-label="画面切り替え">
-  <button type="button" class="study-nav-item is-active" data-tab="legacy" aria-current="page"><span class="study-nav-icon">▤</span><span>旧画面</span></button>
-  <button type="button" class="study-nav-item" data-tab="home"><span class="study-nav-icon">⌂</span><span>ホーム</span></button>
-  <button type="button" class="study-nav-item" data-tab="list"><span class="study-nav-icon">☷</span><span>リスト</span></button>
-  <button type="button" class="study-nav-item" data-tab="cards"><span class="study-nav-icon">▣</span><span>カード</span></button>
-</nav>
-<script src="navigation.js"></script>
-<script src="home.js"></script>
+</div>
+
+<nav class="bottom-nav"><div class="nav-inner">
+<a class="nav-btn active" data-page="home" href="#home"><span class="ico">⌂</span>ホーム</a>
+<a class="nav-btn" data-page="list" href="#list"><span class="ico">☷</span>リスト</a>
+<a class="nav-btn" data-page="cards" href="#cards"><span class="ico">▣</span>カード</a>
+<a class="nav-btn" data-page="settings" href="#settings"><span class="ico">⚙</span>設定</a>
+</div></nav>
+
+<dialog id="editDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
+  <form method="dialog" id="wordForm">
+    <h2 id="dialogTitle">単語を追加</h2>
+    <div class="field"><label for="wordTargetList">登録先リスト</label><select id="wordTargetList"></select></div>
+    <div class="field"><label for="editKo">韓国語</label><input id="editKo" required></div>
+    <div class="field"><label for="editJa">日本語の意味</label><input id="editJa" required></div>
+    <div class="field"><label for="editEx">例文（韓国語）</label><textarea id="editEx" rows="2"></textarea></div>
+    <div class="field"><label for="editExJa">例文の日本語訳</label><textarea id="editExJa" rows="2"></textarea></div>
+    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="saveWordBtn" value="default">保存</button></div>
+  </form>
+</dialog>
+<dialog id="importDialog" style="width:min(560px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
+  <form method="dialog" id="importForm">
+    <h2>単語をインポート</h2>
+    <p class="tiny">1行に「韓国語:日本語」の形式で入力します。登録先はここで選べます。</p>
+    <div class="field"><label for="importMode">登録先</label><select id="importMode"><option value="existing">既存リストに追加</option><option value="new">新しいリストを作成して登録</option></select></div>
+    <div class="field" id="existingListField"><label for="importTargetList">追加先リスト</label><select id="importTargetList"></select></div>
+    <div class="field" id="newListField"><label for="newListName">新しいリスト名</label><input id="newListName" placeholder="例：語学堂4級"></div>
+    <div class="field"><label for="importText">単語データ</label><textarea id="importText" rows="7" placeholder="한적하다:人通りが少なく静かだ&#10;잠잠하다:騒ぎが収まって静かだ"></textarea></div>
+    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="doImport" value="default">取り込む</button></div>
+  </form>
+</dialog>
+<dialog id="actionDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
+  <div class="eyebrow">ADD VOCABULARY</div>
+  <h2 style="margin-top:6px">どの方法で追加しますか？</h2>
+  <p class="tiny">登録先のリストを選んで、単語を追加できます。</p>
+  <div class="choice-list">
+    <button class="choice-btn" onclick="closeActionChooser();openAdd()"><span class="choice-symbol">✎</span><span><strong>1語ずつ追加</strong><small>韓国語・日本語・例文を入力</small></span></button>
+    <button class="choice-btn" onclick="closeActionChooser();openImport()"><span class="choice-symbol">⇧</span><span><strong>まとめてインポート</strong><small>テキストを貼り付けて複数語を登録</small></span></button>
+  </div>
+  <button class="btn full" style="margin-top:14px" onclick="closeActionChooser()">キャンセル</button>
+</dialog>
+
+<dialog id="createListDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
+  <form method="dialog" id="createListForm">
+    <div class="eyebrow">NEW WORD LIST</div>
+    <h2 style="margin-top:6px">新しいリストを作成</h2>
+    <p class="tiny">作成したリストには、あとから単語を1語ずつ追加したり、まとめてインポートしたりできます。</p>
+    <div class="field"><label for="createListName">リスト名</label><input id="createListName" placeholder="例：語学堂4級、広告・マーケティング" required></div>
+    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="createListBtn" value="default">リストを作成</button></div>
+  </form>
+</dialog>
+<div id="toast" style="position:fixed;left:50%;bottom:95px;transform:translateX(-50%);background:#f4f5f7;color:#111318;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:750;display:none;z-index:20;max-width:90%;text-align:center"></div>
+
+<script src="words.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="new-ui.js"></script>
 </body>
 </html>
