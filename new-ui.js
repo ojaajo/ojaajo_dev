@@ -47,14 +47,24 @@ function toggleListSearch(){
   const opening=panel.hidden;panel.hidden=!opening;
   button.setAttribute('aria-expanded',String(opening));button.setAttribute('aria-label',opening?'検索を閉じる':'検索を開く');
   button.textContent=opening?'×':'⌕';
-  if(opening){el('pageRangePanel').hidden=true;el('listSettingsPanel').hidden=true;el('search').focus()}
+  if(opening){el('pageRangePanel').hidden=true;el('listSettingsPanel').hidden=true;el('search')?.focus()}
   else{el('search').value='';renderWords()}
 }
 function closeListSearch(){const panel=el('listSearchPanel'),button=el('listSearchToggle');if(panel)panel.hidden=true;if(button){button.textContent='⌕';button.setAttribute('aria-expanded','false');button.setAttribute('aria-label','検索を開く')}if(el('search'))el('search').value=''}
 function speakKorean(text){
   if(!text)return;
-  if(!('speechSynthesis' in window)){alert('このブラウザは音声再生に対応していません。');return}
-  window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ko-KR';u.rate=.9;window.speechSynthesis.speak(u);
+  if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){
+    alert('このブラウザでは音声読み上げを利用できません。');return;
+  }
+  const synth=window.speechSynthesis;
+  const utterance=new SpeechSynthesisUtterance(text);
+  utterance.lang='ko-KR';utterance.rate=0.9;utterance.volume=1;
+  const voices=synth.getVoices();
+  const korean=voices.find(v=>v.lang.toLowerCase().replace('_','-').startsWith('ko'));
+  if(korean)utterance.voice=korean;
+  utterance.onerror=e=>{console.warn('音声再生エラー',e.error);if(e.error!=='canceled'&&e.error!=='interrupted')alert('音声を再生できませんでした。端末の韓国語音声設定を確認してください。')};
+  synth.cancel();synth.speak(utterance);
+  if(synth.paused)synth.resume();
 }
 function playWordVoice(word){speakKorean(word)}
 function refreshPageSelectors(){const max=Math.max(1,Math.ceil(activeWords().length/80));for(const id of ['startPage','endPage']){const s=el(id);s.replaceChildren();for(let n=1;n<=max;n++){const o=document.createElement('option');o.value=n;o.textContent=n+'ページ';s.append(o)}s.value=id==='startPage'?rangeStart:rangeEnd}updateRangeLabel()}

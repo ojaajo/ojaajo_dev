@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111318">
-<title>韓国語単語暗記ツール | 新UI試作</title>
+<title>韓国語単語暗記ツール | Step 9</title>
 <style>
 :root{color-scheme:dark;--bg:#111318;--panel:#1a1d24;--panel2:#222630;--line:#303540;--text:#f4f5f7;--muted:#9ba2b0;--accent:#b7f36b;--accent-ink:#17200c;--red:#ff8585}
 *{box-sizing:border-box}
@@ -100,7 +100,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .choice-btn strong{display:block;font-size:14px}.choice-btn small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 
 @media(min-width:600px){.app{padding-left:26px;padding-right:26px}.hero{padding:30px}.panel{padding:22px}.word{padding:16px}}
-[hidden]{display:none!important}\n.bottom-nav{z-index:100}\n
+[hidden]{display:none!important}
+.bottom-nav{z-index:100}
+
 /* JavaScriptが無効なプレビューでも単語一覧を開ける */
 [hidden]{display:none!important}
 body:has(#word-detail:target) .page.active,body:has(#word-detail:target) #list{display:none!important}
@@ -209,7 +211,7 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
   </div>
   <div id="listWordsView" hidden>
     <div class="word-list-sticky compact-head">
-      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small subtle" id="listSearchToggle" onclick="toggleListSearch()" aria-label="検索を開く" aria-expanded="false" title="検索">⌕</button><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
+      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small subtle" id="listSearchToggle" type="button" onclick="toggleListSearch()" aria-label="検索を開く" aria-expanded="false" title="検索">⌕</button><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
       <div class="field list-search-panel" id="listSearchPanel" hidden><input id="search" type="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()" autocomplete="off" aria-label="単語検索"></div>
       <button type="button" class="range-summary" onclick="togglePageRange()"><span>▤ <span id="rangeSummary">1〜1ページ</span></span><span id="rangeWordCount">6語</span><span>⌄</span></button>
       <div class="range-panel" id="pageRangePanel" hidden><div class="range-fields"><label>開始ページ<select id="startPage" onchange="validatePageRange('start')"></select></label><label>終了ページ<select id="endPage" onchange="validatePageRange('end')"></select></label></div><button class="btn primary full small" onclick="applyPageRange()">この範囲を表示</button></div>
@@ -363,6 +365,6 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js"></script>
+<script src="new-ui.js?v=20261014-step9"></script>
 </body>
 </html>
