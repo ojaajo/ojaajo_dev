@@ -343,11 +343,14 @@ if ('serviceWorker' in navigator) {
     <div class="modern-eyebrow">YOUR STUDY SPACE</div>
     <h1>ホーム</h1>
     <p class="modern-subtitle">今日も少しずつ、覚えていこう。</p>
-    <div class="modern-feature"><span class="modern-feature-icon">✦</span><div><strong>韓国語の学習</strong><p>新しい学習ホームを準備中</p></div></div>
+    <div class="modern-feature"><span class="modern-feature-icon">✦</span><div><strong>韓国語の学習</strong><p id="modern-home-overview">学習状況を読み込んでいます…</p></div></div>
+    <h2>単語リスト</h2>
+    <p id="modern-home-status" class="modern-home-status" role="status" aria-live="polite">読み込み中…</p>
+    <div id="modern-home-lists" class="modern-home-lists"></div>
     <h2>学習メニュー</h2>
     <button class="modern-action" type="button" data-go="list"><span>☷</span><span><strong>単語リスト</strong><small>単語一覧を開く</small></span><span>›</span></button>
     <button class="modern-action" type="button" data-go="cards"><span>▣</span><span><strong>フラッシュカード</strong><small>カード画面を開く</small></span><span>›</span></button>
-    <div class="modern-note">現在はデザイン確認用です。学習データは旧画面から利用できます。</div>
+    <div class="modern-note">単語リストと暗記状況を表示しています。単語の編集・学習は引き続き旧画面から利用できます。</div>
   </section>
   <section class="modern-page" data-screen="list" hidden>
     <div class="modern-eyebrow">VOCABULARY</div><h1>リスト</h1><p class="modern-subtitle">単語一覧の新画面を準備中</p>
@@ -367,5 +370,6 @@ if ('serviceWorker' in navigator) {
   <button type="button" class="study-nav-item" data-tab="cards"><span class="study-nav-icon">▣</span><span>カード</span></button>
 </nav>
 <script src="navigation.js"></script>
+<script src="home.js"></script>
 </body>
 </html>

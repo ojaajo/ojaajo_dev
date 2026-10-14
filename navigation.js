@@ -18,6 +18,7 @@
       else button.removeAttribute('aria-current');
     });
     window.scrollTo(0, 0);
+    window.dispatchEvent(new CustomEvent('study-screen-changed', { detail: { screen: screen } }));
   }
   document.querySelectorAll('#study-bottom-nav [data-tab], #modern-workspace [data-go]').forEach(function (button) {
     button.addEventListener('click', function () {
