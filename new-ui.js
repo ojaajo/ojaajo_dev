@@ -219,24 +219,89 @@ function hideLegacyConnectionBanner(){
 }
 new MutationObserver(()=>hideLegacyConnectionBanner()).observe(document.body,{childList:true,subtree:true});
 hideLegacyConnectionBanner();
+async function getSignedInUser(){
+  if(typeof supabaseClient==='undefined')throw new Error('Supabaseに接続できません。');
+  const {data,error}=await supabaseClient.auth.getUser();
+  if(error)throw error;
+  if(!data?.user)throw new Error('ログインが必要です。');
+  return data.user;
+}
+function isBuiltinList(key){return names.some(([k])=>k===key)}
+function editableListKeys(){return Object.keys(lists).filter(k=>!isBuiltinList(k))}
+function showEditError(e){console.error('単語保存エラー',e);alert('保存できませんでした：'+(e?.message||String(e)))}
 async function openWordEditor(w){
   const dialog=el('wordEditDialog');if(!dialog)return;
+  const listKey=currentList,original=w.ko;
   el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';
   dialog.showModal();
   el('saveWordEdit').onclick=async()=>{
+    const button=el('saveWordEdit');if(button.disabled)return;
     const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim();
     if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
-    const {data:{user},error:authError}=await supabaseClient.auth.getUser();
-    if(authError||!user){alert('保存するにはログインが必要です。');return}
-    // Built-in lists are stored in words.js, not vocab_words. Never pretend to save them.
-    if(names.some(([key])=>key===currentList)){alert('標準リストの編集はまだ対応していません。元データを保護するため保存しません。');return}
-    const {data,error}=await supabaseClient.from('vocab_words').update({word:ko,meaning:ja,example:ex}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko).select('word');
-    if(error||!data?.length){alert('保存できませんでした。'+(error?.message||'対象が見つかりません'));return}
-    dialog.close();await loadRealData();
+    if(isBuiltinList(listKey)){alert('標準リストはwords.jsから読み込んでいるため、この画面では編集できません。');return}
+    // A word is the progress key. Renaming a studied word would orphan its progress;
+    // defer that operation until a safe progress migration is implemented.
+    if(ko!==original&&w.status!=='unseen'){
+      alert('暗記記録がある単語の名前変更は、記録保護のため現在できません。意味と例文は編集できます。');return;
+    }
+    if(ko!==original&&(lists[listKey]||[]).some(item=>item.ko===ko)){
+      alert('同じ単語がこのリストに存在します。');return;
+    }
+    button.disabled=true;
+    try{
+      const user=await getSignedInUser();
+      const {data,error}=await supabaseClient.from('vocab_words')
+        .update({word:ko,meaning:ja,example:ex})
+        .eq('user_id',user.id).eq('list_key',listKey).eq('word',original).select('word');
+      if(error)throw error;
+      if(!data?.length)throw new Error('編集対象が見つかりません。');
+      dialog.close();await loadRealData();
+    }catch(e){showEditError(e)}finally{button.disabled=false}
   };
 }
+function openActionChooser(){el('actionDialog')?.showModal()}
+function closeActionChooser(){el('actionDialog')?.close()}
+function openCreateList(){unsupported()}
+function openImport(){unsupported()}
+function openAdd(){
+  const keys=editableListKeys(),dialog=el('editDialog'),target=el('wordTargetList');
+  if(!dialog||!target)return;
+  if(!keys.length){alert('追加できる自作リストがありません。リスト作成機能は次のステップで対応します。');return}
+  target.replaceChildren();
+  for(const key of keys){const option=document.createElement('option');option.value=key;option.textContent=listNames[key]||key;target.append(option)}
+  target.value=keys.includes(currentList)?currentList:keys[0];
+  safeText('dialogTitle','単語を追加');
+  for(const id of ['editKo','editJa','editEx','editExJa'])el(id).value='';
+  dialog.showModal();
+}
+async function submitNewWord(event){
+  event.preventDefault();
+  const button=el('saveWordBtn');if(button.disabled)return;
+  const key=el('wordTargetList').value;
+  const ko=el('editKo').value.trim(),ja=el('editJa').value.trim(),ex=el('editEx').value.trim();
+  const exja=el('editExJa').value.trim();
+  if(!editableListKeys().includes(key)){alert('自作リストを選択してください。');return}
+  if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
+  if(exja){alert('例文の日本語訳は現在のvocab_wordsテーブルに保存先がないため、まだ登録できません。今回は空欄にしてください。');return}
+  if((lists[key]||[]).some(w=>w.ko===ko)){alert('このリストには同じ単語がすでにあります。');return}
+  button.disabled=true;
+  try{
+    const user=await getSignedInUser();
+    const page=Math.max(1,Math.ceil(((lists[key]||[]).length+1)/WORDS_PER_PAGE));
+    const {data,error}=await supabaseClient.from('vocab_words')
+      .insert({user_id:user.id,list_key:key,word:ko,meaning:ja,example:ex,page})
+      .select('word');
+    if(error)throw error;
+    if(!data?.length)throw new Error('追加した単語を確認できませんでした。');
+    el('editDialog').close();
+    await loadRealData();
+    if(currentList===key&&!el('listWordsView').hidden){refreshPageSelectors();renderWords()}
+  }catch(e){showEditError(e)}finally{button.disabled=false}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const form=el('wordForm');if(form)form.addEventListener('submit',submitNewWord);
+});
 
-function openActionChooser(){unsupported()}function openCreateList(){unsupported()}function openImport(){unsupported()}function openAdd(){unsupported()}
 // Card learning: settings and navigation use real words and shared progress persistence.
 let cardListKey='beginner',cardDeck=[],cardIndex=0,meaningRevealed=false,exampleShown=false;
 function showCardLists(){el('cardListView').hidden=false;el('cardSetupView').hidden=true;el('cardQuizView').hidden=true;renderCardLists()}
