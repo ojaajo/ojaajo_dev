@@ -9,8 +9,37 @@ function unsupported(){alert('この操作は現在移行中です。旧画面�
 function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')renderCardLists();window.scrollTo(0,0)}
 function activeWords(){return lists[currentList]||[]}
 function updateHomeStats(){let words=Object.values(lists).flat();safeText('homeWordCount',words.length);safeText('homeListCount',Object.keys(lists).length);safeText('homeKnownCount',words.filter(w=>w.known).length)}
-function renderListIndex(){const root=el('listIndex');if(!root)return;root.replaceChildren();Object.keys(lists).forEach(key=>{const words=lists[key],known=words.filter(w=>w.known).length,pct=words.length?Math.round(100*known/words.length):0;const b=document.createElement('button');b.className='list-index-card';b.type='button';const ring=document.createElement('span');ring.className='list-index-icon';ring.style.background=`conic-gradient(var(--accent) 0 ${pct}%,#343a35 ${pct}% 100%)`;const value=document.createElement('span');value.textContent=pct+'%';ring.append(value);const copy=document.createElement('span');copy.className='list-index-copy';const title=document.createElement('strong');title.textContent=listNames[key]||key;const info=document.createElement('small');info.textContent=`${words.length}語 ・ 暗記済み ${known}語`;const track=document.createElement('span');track.className='list-progress';const fill=document.createElement('span');fill.className='list-progress-fill';fill.style.width=pct+'%';track.append(fill);const detail=document.createElement('span');detail.className='list-progress-detail';detail.textContent=`進捗 ${pct}%　　${known} / ${words.length}語`;copy.append(title,info,track,detail);const arrow=document.createElement('span');arrow.className='list-index-arrow';arrow.textContent='›';b.append(ring,copy,arrow);b.onclick=()=>openWordList(key);root.append(b)})}
-function renderCardLists(){const root=el('cardListChoices');if(!root)return;root.replaceChildren();Object.keys(lists).forEach(key=>{const words=lists[key],known=words.filter(w=>w.known).length;const b=document.createElement('button');b.type='button';b.className='list-index-card';b.textContent=`${listNames[key]}　${words.length}語 ・ 暗記済み ${known}語　›`;b.onclick=()=>{unsupported()};root.append(b)})}
+// One shared list-card component for both the List and Cards entry screens.
+function createListChoice(key, onSelect){
+  const words=lists[key]||[];
+  const known=words.filter(w=>w.known).length;
+  const pct=words.length?Math.round(100*known/words.length):0;
+  const button=document.createElement('button');
+  button.type='button';button.className='list-index-card';
+  const ring=document.createElement('span');ring.className='list-index-icon';
+  ring.style.background=`conic-gradient(var(--accent) 0 ${pct}%,#343a35 ${pct}% 100%)`;
+  const value=document.createElement('span');value.textContent=pct+'%';ring.append(value);
+  const copy=document.createElement('span');copy.className='list-index-copy';
+  const title=document.createElement('strong');title.textContent=listNames[key]||key;
+  const info=document.createElement('small');info.textContent=`${words.length}語 ・ 暗記済み ${known}語`;
+  const track=document.createElement('span');track.className='list-progress';
+  const fill=document.createElement('span');fill.className='list-progress-fill';fill.style.width=pct+'%';track.append(fill);
+  const detail=document.createElement('span');detail.className='list-progress-detail';
+  const rate=document.createElement('span');rate.textContent=`進捗 ${pct}%`;
+  const count=document.createElement('span');count.textContent=`${known} / ${words.length}語`;
+  detail.append(rate,count);copy.append(title,info,track,detail);
+  const arrow=document.createElement('span');arrow.className='list-index-arrow';arrow.textContent='›';
+  button.append(ring,copy,arrow);button.addEventListener('click',onSelect);
+  return button;
+}
+function renderListIndex(){
+  const root=el('listIndex');if(!root)return;
+  root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>openWordList(key))));
+}
+function renderCardLists(){
+  const root=el('cardListChoices');if(!root)return;
+  root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
+}
 function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex()}
 function openWordList(key){currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();window.scrollTo(0,0)}
 function refreshPageSelectors(){const max=Math.max(1,Math.ceil(activeWords().length/80));for(const id of ['startPage','endPage']){const s=el(id);s.replaceChildren();for(let n=1;n<=max;n++){const o=document.createElement('option');o.value=n;o.textContent=n+'ページ';s.append(o)}s.value=id==='startPage'?rangeStart:rangeEnd}updateRangeLabel()}
