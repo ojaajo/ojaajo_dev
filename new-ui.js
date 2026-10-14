@@ -8,7 +8,34 @@ function safeText(id,s){if(el(id))el(id).textContent=s}
 function unsupported(){alert('この操作は現在移行中です。旧画面から操作してください。');}
 function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();window.scrollTo(0,0)}
 function activeWords(){return lists[currentList]||[]}
-function updateHomeStats(){let words=Object.values(lists).flat();safeText('homeWordCount',words.length);safeText('homeListCount',Object.keys(lists).length);safeText('homeKnownCount',words.filter(w=>w.known).length)}
+function updateHomeStats(){
+  const words=Object.values(lists).flat();
+  const known=words.filter(w=>w.status==='known').length;
+  const unknown=words.filter(w=>w.status==='unknown').length;
+  const unseen=words.length-known-unknown;
+  const pct=words.length?Math.round(100*known/words.length):0;
+  safeText('homeWordCount',words.length.toLocaleString());
+  safeText('homeListCount',Object.keys(lists).length);
+  safeText('homeKnownCount',known.toLocaleString());
+  safeText('homeProgressPercent',pct+'%');
+  safeText('homeProgressKnown',known.toLocaleString()+'語');
+  safeText('homeProgressUnknown',unknown.toLocaleString()+'語');
+  safeText('homeProgressUnseen',unseen.toLocaleString()+'語');
+  const ring=el('homeProgressRing');if(ring)ring.style.setProperty('--progress',pct+'%');
+  const detail=el('homeLevelProgress');
+  if(detail){detail.replaceChildren();for(const [key,ws] of Object.entries(lists)){
+    const n=ws.filter(w=>w.status==='known').length;
+    const rate=ws.length?Math.round(n*100/ws.length):0;
+    const item=document.createElement('div');item.className='home-level-row';
+    const head=document.createElement('div');head.className='home-level-head';
+    const name=document.createElement('span');name.textContent=listNames[key]||key;
+    const value=document.createElement('span');value.textContent=`${rate}% (${n}/${ws.length}語)`;
+    head.append(name,value);
+    const track=document.createElement('div');track.className='home-level-track';
+    const fill=document.createElement('div');fill.className='home-level-fill';fill.style.width=rate+'%';track.append(fill);
+    item.append(head,track);detail.append(item);
+  }}
+}
 // One shared list-card component for both the List and Cards entry screens.
 function createListChoice(key, onSelect){
   const words=lists[key]||[];
@@ -154,10 +181,15 @@ async function cycleWordStatus(w,button){
     const query=()=>supabaseClient.from('word_progress').select('status').eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
     const {data:existing,error:readError}=await query();if(readError)throw readError;
     // Original progress values use Japanese labels; no local-only update.
-    const value=next==='known'?'暗記済み':next==='unknown'?'未暗記':'未確認';
-    const result=existing?.length
-      ?await supabaseClient.from('word_progress').update({status:value}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko)
-      :await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:currentList,word:w.ko,status:value});
+    const value=next==='known'?'暗記済':next==='unknown'?'未暗記':null;
+    let result;
+    if(value===null){
+      result=await supabaseClient.from('word_progress').delete().eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
+    }else if(existing?.length){
+      result=await supabaseClient.from('word_progress').update({status:value}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
+    }else{
+      result=await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:currentList,word:w.ko,status:value});
+    }
     if(result.error)throw result.error;
     w.status=next;w.known=next==='known';
     button.className='status status-action '+(next==='known'?'known':next==='unknown'?'unknown':'');
@@ -167,6 +199,13 @@ async function cycleWordStatus(w,button){
   }catch(error){console.error('暗記状況の保存失敗',error);alert('暗記状況を保存できませんでした：'+error.message)}
   finally{button.disabled=false}
 }
+// Keep the existing Supabase login button and its handlers; move only its button into the header.
+function placeCloudControl(){
+  const button=el('sb-cloud-toggle'),slot=el('headerCloudSlot');
+  if(button&&slot&&button.parentElement!==slot)slot.appendChild(button);
+}
+new MutationObserver(placeCloudControl).observe(document.body,{childList:true,subtree:true});
+placeCloudControl();
 // Hide the legacy connection banner; authentication remains accessible from the cloud control.
 function hideLegacyConnectionBanner(){
   for(const node of document.querySelectorAll('body *')){
