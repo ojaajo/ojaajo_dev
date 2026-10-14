@@ -174,13 +174,13 @@ async function persistWordStatus(listKey,w,next){
   if(typeof supabaseClient==='undefined')throw new Error('クラウドに接続できません。');
   const {data:{user},error:authError}=await supabaseClient.auth.getUser();
   if(authError||!user)throw new Error('暗記状況の保存にはログインが必要です。');
-  const base=()=>supabaseClient.from('word_progress').eq('user_id',user.id).eq('list_key',listKey).eq('word',w.ko);
-  const {data:existing,error:readError}=await base().select('status');
+  const scope=query=>query.eq('user_id',user.id).eq('list_key',listKey).eq('word',w.ko);
+  const {data:existing,error:readError}=await scope(supabaseClient.from('word_progress').select('status'));
   if(readError)throw readError;
   const value=next==='known'?'暗記済':next==='unknown'?'未暗記':null;
   let result;
-  if(value===null)result=await base().delete();
-  else if(existing?.length)result=await base().update({status:value});
+  if(value===null)result=await scope(supabaseClient.from('word_progress').delete());
+  else if(existing?.length)result=await scope(supabaseClient.from('word_progress').update({status:value}));
   else result=await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:listKey,word:w.ko,status:value});
   if(result.error)throw result.error;
   w.status=next;w.known=next==='known';
