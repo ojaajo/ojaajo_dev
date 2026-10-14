@@ -131,7 +131,7 @@ function renderWords(){
     voice.addEventListener('click',()=>voiceFromOldApp(w.ko));koLine.append(voice);
     body.append(koLine,wordPart(w.ja,'ja',showJa));
     const right=document.createElement('div');right.className='word-right';
-    const status=document.createElement('span');status.className='status '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';
+    const status=document.createElement('button');status.type='button';status.className='status status-action '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';status.title='タップして暗記状況を切り替え';status.setAttribute('aria-label',w.ko+'の暗記状況を切り替え');status.addEventListener('click',()=>cycleWordStatus(w,status));
     const menu=document.createElement('button');menu.type='button';menu.className='word-edit-menu';menu.textContent='⋮';menu.title='単語の編集';menu.setAttribute('aria-label','単語・訳・例文の編集');
     menu.addEventListener('click',()=>openWordEditor(w));right.append(status,menu);top.append(body,right);a.append(top);
     if(w.ex){const btn=document.createElement('button');btn.className='btn small';btn.textContent='例文を見る';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex;btn.onclick=()=>{ex.hidden=!ex.hidden;btn.textContent=ex.hidden?'例文を見る':'例文を隠す'};a.append(btn,ex)}
@@ -142,6 +142,42 @@ function renderWords(){
   const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`);
   const controls=el('wordNavigator');if(controls)controls.hidden=!visibleWordRows.length;
 }
+// Tap-to-cycle progress. Persist first; only show a successful change after Supabase confirms it.
+async function cycleWordStatus(w,button){
+  if(button.disabled)return;
+  if(typeof supabaseClient==='undefined'){alert('クラウドに接続できません。');return}
+  const next={unseen:'known',known:'unknown',unknown:'unseen'}[w.status]||'known';
+  button.disabled=true;
+  try{
+    const {data:{user},error:authError}=await supabaseClient.auth.getUser();
+    if(authError||!user)throw new Error('暗記状況の保存にはログインが必要です。');
+    const query=()=>supabaseClient.from('word_progress').select('status').eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
+    const {data:existing,error:readError}=await query();if(readError)throw readError;
+    // Original progress values use Japanese labels; no local-only update.
+    const value=next==='known'?'暗記済み':next==='unknown'?'未暗記':'未確認';
+    const result=existing?.length
+      ?await supabaseClient.from('word_progress').update({status:value}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko)
+      :await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:currentList,word:w.ko,status:value});
+    if(result.error)throw result.error;
+    w.status=next;w.known=next==='known';
+    button.className='status status-action '+(next==='known'?'known':next==='unknown'?'unknown':'');
+    button.textContent=next==='known'?'✓ 暗記済み':next==='unknown'?'× 未暗記':'○ 未確認';
+    updateHomeStats();renderListIndex();renderCardLists();
+    const words=activeWords();safeText('selectedListSummary',`${words.length}語 ・ 暗記済み ${words.filter(x=>x.known).length}語`);
+  }catch(error){console.error('暗記状況の保存失敗',error);alert('暗記状況を保存できませんでした：'+error.message)}
+  finally{button.disabled=false}
+}
+// Hide the legacy connection banner; authentication remains accessible from the cloud control.
+function hideLegacyConnectionBanner(){
+  for(const node of document.querySelectorAll('body *')){
+    if(node.children.length>2||!node.textContent||!/^\s*✅?\s*Supabase接続OK/.test(node.textContent))continue;
+    const banner=node;
+    if(banner.id==='sb-cloud-toggle'||banner.closest('section:has(#sb-auth-status)'))continue;
+    banner.style.display='none';
+  }
+}
+new MutationObserver(()=>hideLegacyConnectionBanner()).observe(document.body,{childList:true,subtree:true});
+hideLegacyConnectionBanner();
 async function openWordEditor(w){
   const dialog=el('wordEditDialog');if(!dialog)return;
   el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';
