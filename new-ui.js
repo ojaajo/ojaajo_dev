@@ -1,4 +1,4 @@
-// New UI data bridge — read-only until write workflows are migrated.
+// New UI data bridge — card and list progress share Supabase persistence.
 let lists={},listNames={},currentList='beginner',rangeStart=1,rangeEnd=1;
 let showKo=true,showJa=true,allExamples=false,shuffleEnabled=false;
 const WORDS_PER_PAGE=80;
@@ -169,33 +169,35 @@ function renderWords(){
   const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`);
   const controls=el('wordNavigator');if(controls)controls.hidden=!visibleWordRows.length;
 }
-// Tap-to-cycle progress. Persist first; only show a successful change after Supabase confirms it.
+// Shared persistence for list and card learning; use the legacy database values.
+async function persistWordStatus(listKey,w,next){
+  if(typeof supabaseClient==='undefined')throw new Error('クラウドに接続できません。');
+  const {data:{user},error:authError}=await supabaseClient.auth.getUser();
+  if(authError||!user)throw new Error('暗記状況の保存にはログインが必要です。');
+  const base=()=>supabaseClient.from('word_progress').eq('user_id',user.id).eq('list_key',listKey).eq('word',w.ko);
+  const {data:existing,error:readError}=await base().select('status');
+  if(readError)throw readError;
+  const value=next==='known'?'暗記済':next==='unknown'?'未暗記':null;
+  let result;
+  if(value===null)result=await base().delete();
+  else if(existing?.length)result=await base().update({status:value});
+  else result=await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:listKey,word:w.ko,status:value});
+  if(result.error)throw result.error;
+  w.status=next;w.known=next==='known';
+  updateHomeStats();renderListIndex();renderCardLists();
+  if(currentList===listKey){
+    const words=activeWords();
+    safeText('selectedListSummary',`${words.length}語 ・ 暗記済み ${words.filter(x=>x.known).length}語`);
+  }
+}
 async function cycleWordStatus(w,button){
   if(button.disabled)return;
-  if(typeof supabaseClient==='undefined'){alert('クラウドに接続できません。');return}
   const next={unseen:'known',known:'unknown',unknown:'unseen'}[w.status]||'known';
   button.disabled=true;
   try{
-    const {data:{user},error:authError}=await supabaseClient.auth.getUser();
-    if(authError||!user)throw new Error('暗記状況の保存にはログインが必要です。');
-    const query=()=>supabaseClient.from('word_progress').select('status').eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
-    const {data:existing,error:readError}=await query();if(readError)throw readError;
-    // Original progress values use Japanese labels; no local-only update.
-    const value=next==='known'?'暗記済':next==='unknown'?'未暗記':null;
-    let result;
-    if(value===null){
-      result=await supabaseClient.from('word_progress').delete().eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
-    }else if(existing?.length){
-      result=await supabaseClient.from('word_progress').update({status:value}).eq('user_id',user.id).eq('list_key',currentList).eq('word',w.ko);
-    }else{
-      result=await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:currentList,word:w.ko,status:value});
-    }
-    if(result.error)throw result.error;
-    w.status=next;w.known=next==='known';
+    await persistWordStatus(currentList,w,next);
     button.className='status status-action '+(next==='known'?'known':next==='unknown'?'unknown':'');
     button.textContent=next==='known'?'✓ 暗記済み':next==='unknown'?'× 未暗記':'○ 未確認';
-    updateHomeStats();renderListIndex();renderCardLists();
-    const words=activeWords();safeText('selectedListSummary',`${words.length}語 ・ 暗記済み ${words.filter(x=>x.known).length}語`);
   }catch(error){console.error('暗記状況の保存失敗',error);alert('暗記状況を保存できませんでした：'+error.message)}
   finally{button.disabled=false}
 }
@@ -235,7 +237,7 @@ async function openWordEditor(w){
 }
 
 function openActionChooser(){unsupported()}function openCreateList(){unsupported()}function openImport(){unsupported()}function openAdd(){unsupported()}
-// Card learning: settings and navigation use real words; write actions stay disabled.
+// Card learning: settings and navigation use real words and shared progress persistence.
 let cardListKey='beginner',cardDeck=[],cardIndex=0,meaningRevealed=false,exampleShown=false;
 function showCardLists(){el('cardListView').hidden=false;el('cardSetupView').hidden=true;el('cardQuizView').hidden=true;renderCardLists()}
 function chooseCardList(key){
@@ -290,7 +292,20 @@ function playCardVoice(force=false){
 }
 function revealMeaning(){meaningRevealed=!meaningRevealed;renderCard()}
 function toggleCardExample(){exampleShown=!exampleShown;renderCard()}
-function markCard(){unsupported()}
+let cardSaveBusy=false;
+async function markCard(remembered){
+  if(cardSaveBusy||!cardDeck.length)return;
+  const w=currentCardWord();if(!w)return;
+  cardSaveBusy=true;
+  const buttons=[...document.querySelectorAll('#cardQuizView .card-controls button')];
+  buttons.forEach(b=>b.disabled=true);
+  try{
+    await persistWordStatus(cardListKey,w,remembered?'known':'unknown');
+    // Keep the selected deck stable, even when status filters would now exclude this word.
+    nextCard();
+  }catch(error){console.error('カードの暗記状況保存失敗',error);alert('暗記状況を保存できませんでした：'+error.message)}
+  finally{cardSaveBusy=false;buttons.forEach(b=>b.disabled=false)}
+}
 function nextCard(){if(!cardDeck.length)return;cardIndex=(cardIndex+1)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
 function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.length)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
 function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s===true)return 'known';if(s==='未暗記'||s==='incorrect'||s===false)return 'unknown';return 'unseen'}
