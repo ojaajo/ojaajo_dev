@@ -126,6 +126,19 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
 #staticRangeDialog{display:none!important}
 #detailSettingsToggle:checked + #staticRangeDialog{display:block!important}
  .card-settings label{display:flex;align-items:center;gap:9px;min-width:0;white-space:normal} .card-settings input{flex-shrink:0;width:19px;height:19px} #cardListView,#cardSetupView,#cardQuizView{max-width:680px;margin:auto} body:has(#card-setup-fallback:target) .page,body:has(#card-quiz-fallback:target) .page{display:none!important}body:has(#card-setup-fallback:target) #cards,body:has(#card-quiz-fallback:target) #cards{display:block!important}body:has(#card-setup-fallback:target) #cardListView,body:has(#card-quiz-fallback:target) #cardListView{display:block!important}#card-setup-fallback:target,#card-quiz-fallback:target{display:block!important}body:has(#card-setup-fallback:target) #cardListChoices,body:has(#card-quiz-fallback:target) #cardListChoices{display:none!important}body:has(#card-quiz-fallback:target) #card-setup-fallback{display:none!important}.list-index-card{text-decoration:none;color:var(--text)}
+
+/* Step 8: fixed search field and compact audio controls */
+.list-search-panel[hidden]{display:none!important}
+.list-search-panel{margin:8px 0 10px!important}
+.list-search-panel input{width:100%;box-sizing:border-box}
+.audio-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-width:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);cursor:pointer;padding:7px;vertical-align:middle}
+.audio-btn svg{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.audio-btn:active{transform:scale(.95)}
+.word-ko-line{display:flex;align-items:center;gap:8px;min-width:0}
+.word-ko-line .korean{min-width:0}
+.card-ko-line{display:flex;justify-content:center;align-items:center;gap:12px;margin:22px 0 10px}
+.card-ko-line .card-korean{margin:0}
+#listSearchToggle{font-size:23px;line-height:1;min-width:36px}
 </style>
 <style>
 /* Supabase cloud control stays above the new bottom navigation */
@@ -196,13 +209,13 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
   </div>
   <div id="listWordsView" hidden>
     <div class="word-list-sticky compact-head">
-      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
+      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small subtle" id="listSearchToggle" onclick="toggleListSearch()" aria-label="検索を開く" aria-expanded="false" title="検索">⌕</button><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
+      <div class="field list-search-panel" id="listSearchPanel" hidden><input id="search" type="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()" autocomplete="off" aria-label="単語検索"></div>
       <button type="button" class="range-summary" onclick="togglePageRange()"><span>▤ <span id="rangeSummary">1〜1ページ</span></span><span id="rangeWordCount">6語</span><span>⌄</span></button>
       <div class="range-panel" id="pageRangePanel" hidden><div class="range-fields"><label>開始ページ<select id="startPage" onchange="validatePageRange('start')"></select></label><label>終了ページ<select id="endPage" onchange="validatePageRange('end')"></select></label></div><button class="btn primary full small" onclick="applyPageRange()">この範囲を表示</button></div>
       <div class="range-panel" id="listSettingsPanel" hidden><div class="setting-choices"><label><input type="checkbox" id="settingKo" checked onchange="setListVisibility('ko',this.checked)"> 韓国語を表示</label><label><input type="checkbox" id="settingJa" checked onchange="setListVisibility('ja',this.checked)"> 日本語を表示</label><label><input type="checkbox" id="shuffleWords" onchange="toggleWordShuffle(this.checked)"> ランダム表示</label><label><input type="checkbox" id="settingExamples" onchange="setListExamples(this.checked)"> 例文を表示</label><label><input type="checkbox" class="dynamicStatusFilter" value="known" checked onchange="renderWords()"> 暗記済み</label><label><input type="checkbox" class="dynamicStatusFilter" value="unseen" checked onchange="renderWords()"> 未確認</label><label><input type="checkbox" class="dynamicStatusFilter" value="unknown" checked onchange="renderWords()"> 未暗記</label></div></div>
     </div>
     <p class="tiny" id="selectedListSummary"></p>
-    <div class="field"><input id="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()"></div>
     <div class="word-list" id="wordList"></div>
     <div class="space"></div>
     <button class="btn full" onclick="openImport()">⇧ このリストに単語をインポート</button>
@@ -252,7 +265,7 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
   <div class="section-head"><div><button class="btn small subtle" onclick="showCardSetup()">← クイズ設定</button><div class="eyebrow" style="margin-top:10px" id="cardListName">初級</div></div><span class="status" id="cardCounter">1 / 4</span></div>
   <div class="panel card-stage">
     <div class="eyebrow" id="cardListName">初級</div>
-    <div class="card-korean" id="cardKorean">가볍다</div>
+    <div class="card-ko-line"><div class="card-korean" id="cardKorean">가볍다</div><button type="button" class="audio-btn" onclick="playCardVoice(true)" aria-label="韓国語を再生" title="韓国語を再生"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg></button></div>
     <div class="card-meaning" id="cardMeaning">軽い</div>
     <div class="card-example" id="cardExample" hidden><strong>例文</strong><div id="cardExampleText"></div><div class="muted tiny" id="cardExampleMeaning" style="margin-top:5px"></div></div>
     <div class="space"></div>
