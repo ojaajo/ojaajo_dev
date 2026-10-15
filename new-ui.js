@@ -416,7 +416,77 @@ async function saveRenamedList(event){
     safeText('selectedListTitle',listNames[key]||key);
   }catch(e){showEditError(e)}finally{button.disabled=false}
 }
-function openImport(){unsupported()}
+
+function openImport(){
+ const d=el('importDialog'),s=el('importTargetList');
+ s.replaceChildren();
+ for(const key of editableListKeys()){
+   const o=document.createElement('option');o.value=key;o.textContent=listNames[key]||key;s.append(o);
+ }
+ el('importMode').value=editableListKeys().length?'existing':'new';
+ el('importFile').value='';el('importText').value='';el('newListName').value='';
+ updateImportMode();d.showModal();
+}
+function updateImportMode(){
+ const create=el('importMode').value==='new';
+ el('existingListField').hidden=create;el('newListField').hidden=!create;
+ el('newListName').required=create;el('importTargetList').required=!create;
+}
+async function readImportFile(){
+ const file=el('importFile').files?.[0];if(!file)return;
+ try{el('importText').value=await file.text()}catch(e){alert('ファイルを読めませんでした: '+e.message)}
+}
+function parseImport(text){
+ const result=[],seen=new Set();
+ for(const [i,line] of text.replace(/^\uFEFF/,'').split(/\r?\n/).entries()){
+  if(!line.trim())continue;
+  const pos=line.search(/[:：]/);
+  if(pos<1)throw new Error((i+1)+'行目に「単語:意味」がありません。');
+  const word=line.slice(0,pos).trim(),meaning=line.slice(pos+1).trim();
+  if(!word||!meaning)throw new Error((i+1)+'行目の単語または意味が空です。');
+  if(!seen.has(word)){result.push({word,meaning});seen.add(word)}
+ }
+ return result;
+}
+async function submitImport(e){
+ e.preventDefault();
+ const btn=el('doImport');if(btn.disabled)return;
+ const mode=el('importMode').value,name=el('newListName').value.trim();
+ let key=el('importTargetList').value;
+ if(mode==='new'&&(!name||Object.values(listNames).includes(name))){alert('新しいリスト名を入力してください（既存名は不可）。');return}
+ if(mode==='existing'&&!editableListKeys().includes(key)){alert('登録先を選択してください。');return}
+ let parsed;
+ try{parsed=parseImport(el('importText').value)}catch(err){alert(err.message);return}
+ if(!parsed.length){alert('単語データがありません。');return}
+ const existing=new Set(mode==='existing'?(lists[key]||[]).map(w=>w.ko):[]);
+ const fresh=parsed.filter(w=>!existing.has(w.word));
+ if(!fresh.length){alert('全単語が登録済みです。');return}
+ btn.disabled=true;let saved=0,created=false;
+ try{
+  const user=await getSignedInUser();
+  if(mode==='new'){
+   key='custom_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9);
+   const r=await supabaseClient.from('vocab_lists').insert({user_id:user.id,list_key:key,name}).select('list_key');
+   if(r.error)throw r.error;
+   if(!r.data?.length)throw new Error('リスト作成を確認できませんでした。');
+   created=true;
+  }
+  const start=(lists[key]||[]).length;
+  for(let i=0;i<fresh.length;i+=100){
+   const batch=fresh.slice(i,i+100).map((w,j)=>({user_id:user.id,list_key:key,word:w.word,meaning:w.meaning,example:'',example_meaning:'',page:Math.floor((start+i+j)/80)+1}));
+   const r=await supabaseClient.from('vocab_words').insert(batch).select('word');
+   if(r.error)throw r.error;
+   if(r.data?.length!==batch.length)throw new Error('登録件数が一致しません。');
+   saved+=batch.length;
+  }
+  el('importDialog').close();await loadRealData();
+  alert(saved+'語を登録しました。'+(parsed.length-fresh.length?'（重複'+(parsed.length-fresh.length)+'語はスキップ）':''));
+ }catch(err){
+  showEditError(new Error(err.message+(created||saved?'（途中まで登録されている可能性があります。再試行前に確認してください）':'')));
+  await loadRealData();
+ }finally{btn.disabled=false}
+}
+
 function openAdd(){
   const keys=editableListKeys(),dialog=el('editDialog'),target=el('wordTargetList');
   if(!dialog||!target)return;
@@ -456,6 +526,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   const form=el('wordForm');if(form)form.addEventListener('submit',submitNewWord);
   el('createListForm')?.addEventListener('submit',saveCreatedList);
   el('renameListForm')?.addEventListener('submit',saveRenamedList);
+  el('importForm')?.addEventListener('submit',submitImport);
+  el('importMode')?.addEventListener('change',updateImportMode);
+  el('importFile')?.addEventListener('change',readImportFile);
 });
 
 // Card learning: settings and navigation use real words and shared progress persistence.
@@ -533,7 +606,7 @@ function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s==
 async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,example_meaning,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example;existing.exja=w.example_meaning||''}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
 // Prevent prototype forms from submitting data until persistence is implemented.
 document.querySelectorAll('dialog form').forEach(form=>{
-  if(['wordForm','createListForm','renameListForm'].includes(form.id))return;
+  if(['wordForm','createListForm','renameListForm','importForm'].includes(form.id))return;
   form.addEventListener('submit',e=>{e.preventDefault();unsupported()});
 });
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();go(b.dataset.page)}));

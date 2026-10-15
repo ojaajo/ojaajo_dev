@@ -483,14 +483,14 @@ header > button[onclick*="settings"]{display:none!important}
   </form>
 </dialog>
 <dialog id="importDialog" style="width:min(560px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
-  <form method="dialog" id="importForm">
+  <form id="importForm">
     <h2>単語をインポート</h2>
     <p class="tiny">1行に「韓国語:日本語」の形式で入力します。登録先はここで選べます。</p>
     <div class="field"><label for="importMode">登録先</label><select id="importMode"><option value="existing">既存リストに追加</option><option value="new">新しいリストを作成して登録</option></select></div>
     <div class="field" id="existingListField"><label for="importTargetList">追加先リスト</label><select id="importTargetList"></select></div>
     <div class="field" id="newListField"><label for="newListName">新しいリスト名</label><input id="newListName" placeholder="例：語学堂4級"></div>
-    <div class="field"><label for="importText">単語データ</label><textarea id="importText" rows="7" placeholder="한적하다:人通りが少なく静かだ&#10;잠잠하다:騒ぎが収まって静かだ"></textarea></div>
-    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="doImport" value="default">取り込む</button></div>
+    <div class="field"><label for="importFile">テキストファイル（.txt）</label><input type="file" id="importFile" accept=".txt,text/plain"></div><div class="field"><label for="importText">単語データ</label><textarea id="importText" rows="7" placeholder="한적하다:人通りが少なく静かだ&#10;잠잠하다:騒ぎが収まって静かだ"></textarea></div>
+    <div class="row"><button class="btn" type="button" onclick="document.getElementById('importDialog').close()">キャンセル</button><button class="btn primary" id="doImport" type="submit">取り込む</button></div>
   </form>
 </dialog>
 <dialog id="actionDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
