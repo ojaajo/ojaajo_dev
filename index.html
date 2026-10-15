@@ -127,7 +127,7 @@ body:has(#word-detail:target) .nav-btn[data-page="list"]{color:var(--accent);bac
 .detail-toggle{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 #staticRangeDialog{display:none!important}
 #detailSettingsToggle:checked + #staticRangeDialog{display:block!important}
- .card-settings label{display:flex;align-items:center;gap:9px;min-width:0;white-space:normal} .card-settings input{flex-shrink:0;width:19px;height:19px} #cardListView,#cardSetupView,#cardQuizView{max-width:680px;margin:auto} body:has(#card-setup-fallback:target) .page,body:has(#card-quiz-fallback:target) .page{display:none!important}body:has(#card-setup-fallback:target) #cards,body:has(#card-quiz-fallback:target) #cards{display:block!important}body:has(#card-setup-fallback:target) #cardListView,body:has(#card-quiz-fallback:target) #cardListView{display:block!important}#card-setup-fallback:target,#card-quiz-fallback:target{display:block!important}body:has(#card-setup-fallback:target) #cardListChoices,body:has(#card-quiz-fallback:target) #cardListChoices{display:none!important}body:has(#card-quiz-fallback:target) #card-setup-fallback{display:none!important}.list-index-card{text-decoration:none;color:var(--text)}
+ .card-settings label{display:flex;align-items:center;gap:9px;min-width:0;white-space:normal} .card-settings input{flex-shrink:0;width:19px;height:19px} #cardListView,#cardSetupView,#cardQuizView{max-width:680px;margin:auto} .list-index-card{text-decoration:none;color:var(--text)}
 
 /* Step 8: fixed search field and compact audio controls */
 .list-search-panel[hidden]{display:none!important}
@@ -340,7 +340,6 @@ header > button[onclick*="settings"]{display:none!important}
     <span class="action-copy"><strong>新しいリストを作成</strong><small>自分用の単語リストを用意する</small></span>
     <span class="action-arrow">›</span>
   </button>
-  <p class="tiny muted" style="margin:14px 2px 0">登録・編集機能は移行中です。<a href="legacy.html" style="color:var(--accent)">旧画面を開く</a></p>
 </section>
 
 <section class="page" id="list">
@@ -384,27 +383,7 @@ header > button[onclick*="settings"]{display:none!important}
  <div id="cardListView">
   <div class="section-head"><div><div class="eyebrow">FLASH CARDS</div><h1>カード学習</h1></div></div>
   <p class="tiny">学習するリストを選択してください。</p>
-  <div id="cardListChoices" class="list-index"><a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('beginner');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>初級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
-<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('intermediate');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>中級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
-<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('advanced');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>上級</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
-<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('expressionup');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>表現力</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a>
-<a class="list-index-card" href="#card-setup-fallback" onclick="if(typeof chooseCardList==='function'){chooseCardList('custom');location.hash='cards';return false}"><span class="list-index-icon" style="background:conic-gradient(var(--accent) 0 33%, #343a35 33% 100%)"><span>33%</span></span><span class="list-index-copy"><strong>自作リスト（デモ）</strong><small>6語 ・ 暗記済み 2語</small></span><span class="list-index-arrow">›</span></a></div>
- </div>
- <div id="card-setup-fallback" class="panel" style="display:none;margin-top:14px">
-  <h2>クイズ設定</h2><p class="tiny">表示範囲（1ページ＝80語）</p>
-  <div class="range-fields"><label>開始ページ<select><option>1ページ</option></select></label><label>終了ページ<select><option>1ページ</option></select></label></div>
-  <p class="tiny">出題するステータス</p><div class="setting-choices"><label><input type="checkbox" checked> 暗記済み</label><label><input type="checkbox" checked> 未確認</label><label><input type="checkbox" checked> 未暗記</label></div>
-  <div class="setting-choices" style="margin-top:14px"><label><input type="checkbox" checked> ランダム出題</label><label><input type="checkbox"> 音声再生</label></div>
-  <p class="tiny" style="margin-top:12px">プレビュー用の設定です。サンプルクイズで画面遷移を確認できます。</p>
-  <a href="#card-quiz-fallback" class="btn primary full" style="display:block;text-align:center;text-decoration:none;margin:12px 0">クイズを開始 →</a>
-  <a href="#cards" class="btn small" style="display:inline-block;margin-top:12px">← リストに戻る</a>
- </div>
- <div id="card-quiz-fallback" class="panel" style="display:none;margin-top:14px;text-align:center">
-  <div class="eyebrow">FLASH CARDS · 1 / 4</div>
-  <h2 style="margin:38px 0 12px;font-size:30px">가볍다</h2>
-  <details style="margin:25px 0"><summary class="btn primary full" style="cursor:pointer;list-style:none">意味を表示</summary><p style="padding:18px">軽い</p></details>
-  <p class="tiny">これは画面遷移確認用のサンプルカードです。暗記状態の保存は行われません。</p>
-  <a href="#card-setup-fallback" class="btn full" style="display:block;text-decoration:none;margin-top:18px">← クイズ設定に戻る</a>
+  <div id="cardListChoices" class="list-index"></div>
  </div>
  <div id="cardSetupView" hidden>
   <div class="section-head"><div><button class="btn small subtle" onclick="showCardLists()">← リスト選択</button><div class="eyebrow" style="margin-top:12px">QUIZ SETTINGS</div><h1 id="cardSetupTitle">クイズ設定</h1></div></div>
@@ -452,7 +431,7 @@ header > button[onclick*="settings"]{display:none!important}
   <div class="panel">
     <h2>リストの管理</h2>
     <button class="btn full" onclick="openImport()">＋ リストを作成／単語をインポート</button>
-    <p class="tiny" style="margin-top:10px">「新しいリストを作成」または「既存リストに追加」を選ぶUIを本番接続時に実装します。</p>
+    <p class="tiny" style="margin-top:10px">テキストファイルから単語をまとめて登録できます。</p>
   </div>
   <div class="panel">
     <h2>学習画面</h2>
@@ -527,6 +506,6 @@ header > button[onclick*="settings"]{display:none!important}
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js?v=20261015-step23"></script>
+<script src="new-ui.js?v=20261015-step26"></script>
 </body>
 </html>
