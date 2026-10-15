@@ -373,7 +373,7 @@ function openImport(){unsupported()}
 function openAdd(){
   const keys=editableListKeys(),dialog=el('editDialog'),target=el('wordTargetList');
   if(!dialog||!target)return;
-  if(!keys.length){alert('追加できる自作リストがありません。リスト作成機能は次のステップで対応します。');return}
+  if(!keys.length){alert('追加できる自作リストがありません。先に新しいリストを作成してください。');return}
   target.replaceChildren();
   for(const key of keys){const option=document.createElement('option');option.value=key;option.textContent=listNames[key]||key;target.append(option)}
   target.value=keys.includes(currentList)?currentList:keys[0];
@@ -485,7 +485,10 @@ function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.l
 function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s===true)return 'known';if(s==='未暗記'||s==='incorrect'||s===false)return 'unknown';return 'unseen'}
 async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,example_meaning,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example;existing.exja=w.example_meaning||''}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
 // Prevent prototype forms from submitting data until persistence is implemented.
-document.querySelectorAll('dialog form').forEach(form=>form.addEventListener('submit',e=>{e.preventDefault();unsupported()}));
+document.querySelectorAll('dialog form').forEach(form=>{
+  if(['wordForm','createListForm','renameListForm'].includes(form.id))return;
+  form.addEventListener('submit',e=>{e.preventDefault();unsupported()});
+});
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();go(b.dataset.page)}));
 supabaseClient.auth.onAuthStateChange(()=>setTimeout(loadRealData,0));
 loadRealData();go('home');

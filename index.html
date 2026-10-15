@@ -472,14 +472,14 @@ header > button[onclick*="settings"]{display:none!important}
 </div></nav>
 
 <dialog id="editDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
-  <form method="dialog" id="wordForm">
+  <form id="wordForm">
     <h2 id="dialogTitle">単語を追加</h2>
     <div class="field"><label for="wordTargetList">登録先リスト</label><select id="wordTargetList"></select></div>
     <div class="field"><label for="editKo">韓国語</label><input id="editKo" required></div>
     <div class="field"><label for="editJa">日本語の意味</label><input id="editJa" required></div>
     <div class="field"><label for="editEx">例文（韓国語）</label><textarea id="editEx" rows="2"></textarea></div>
     <div class="field"><label for="editExJa">例文の日本語訳（任意）</label><textarea id="editExJa" rows="2"></textarea></div>
-    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="saveWordBtn" value="default">保存</button></div>
+    <div class="row"><button class="btn" type="button" onclick="document.getElementById('editDialog').close()">キャンセル</button><button class="btn primary" type="submit" id="saveWordBtn">保存</button></div>
   </form>
 </dialog>
 <dialog id="importDialog" style="width:min(560px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
