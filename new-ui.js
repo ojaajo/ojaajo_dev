@@ -135,7 +135,7 @@ function renderWords(){
   root.replaceChildren();visibleWordRows=[];selectedWordIndex=-1;
   const query=(el('search')?.value||'').trim().toLowerCase();
   const allowed=new Set([...document.querySelectorAll('.dynamicStatusFilter:checked')].map(x=>x.value));
-  let words=activeWords().filter(w=>!query||`${w.ko} ${w.ja} ${w.ex||''}`.toLowerCase().includes(query));
+  let words=activeWords().filter(w=>!query||`${w.ko} ${w.ja} ${w.ex||''} ${w.exja||''}`.toLowerCase().includes(query));
   if(!query)words=words.slice((rangeStart-1)*80,rangeEnd*80);
   if(shuffleEnabled)words=[...words].sort(()=>Math.random()-.5);
   words.filter(w=>allowed.has(w.status)).forEach(w=>{
@@ -161,7 +161,7 @@ function renderWords(){
     const status=document.createElement('button');status.type='button';status.className='status status-action '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';status.title='タップして暗記状況を切り替え';status.setAttribute('aria-label',w.ko+'の暗記状況を切り替え');status.addEventListener('click',()=>cycleWordStatus(w,status));
     const menu=document.createElement('button');menu.type='button';menu.className='word-edit-menu';menu.textContent='⋮';menu.title='単語の編集';menu.setAttribute('aria-label','単語・訳・例文の編集');
     menu.addEventListener('click',()=>openWordEditor(w));right.append(status,menu);top.append(body,right);a.append(top);
-    {const btn=document.createElement('button');btn.className='btn small';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex||'例文はまだ登録されていません。';const updateExampleButton=()=>{btn.textContent=ex.hidden?'例文を見る':'例文を隠す';btn.setAttribute('aria-expanded',String(!ex.hidden))};updateExampleButton();btn.onclick=()=>{ex.hidden=!ex.hidden;updateExampleButton()};a.append(btn,ex)}
+    if(allExamples && String(w.ex||'').trim()){const ex=document.createElement('div');ex.className='example example-line';const ko=document.createElement('div');ko.textContent=w.ex;ex.append(ko);if(String(w.exja||'').trim()){const ja=document.createElement('div');ja.className='example-translation';ja.textContent=w.exja;ex.append(ja)}a.append(ex)}
     const rowIndex=visibleWordRows.length;visibleWordRows.push({node:a,word:w});
     a.addEventListener('click',e=>{if(e.target.closest('button'))return;selectedWordIndex=rowIndex;focusSelectedWord(false)});
     root.append(a);
@@ -285,12 +285,13 @@ function showEditError(e){console.error('単語保存エラー',e);alert('保存
 async function openWordEditor(w){
   const dialog=el('wordEditDialog');if(!dialog)return;
   const listKey=currentList,original=w.ko;
-  el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';
+  el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';el('editWordExJa').value=w.exja||'';
   dialog.showModal();
   el('saveWordEdit').onclick=async()=>{
     const button=el('saveWordEdit');if(button.disabled)return;
-    const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim();
+    const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim(),exja=el('editWordExJa').value.trim();
     if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
+    if(exja&&!ex){alert('例文の日本語訳を登録する場合は、韓国語の例文も入力してください。');return}
     if(isBuiltinList(listKey)&&ko!==original){alert('標準リストの単語そのものは変更できません。意味と例文を編集してください。');return}
     // A word is the progress key. Renaming a studied word would orphan its progress;
     // defer that operation until a safe progress migration is implemented.
@@ -307,9 +308,9 @@ async function openWordEditor(w){
       if(isBuiltinList(listKey)){
         const {data:found,error:readError}=await supabaseClient.from('vocab_words').select('word').eq('user_id',user.id).eq('list_key',listKey).eq('word',original).limit(1);
         if(readError)throw readError;
-        if(found?.length)result=await supabaseClient.from('vocab_words').update({meaning:ja,example:ex}).eq('user_id',user.id).eq('list_key',listKey).eq('word',original).select('word');
-        else result=await supabaseClient.from('vocab_words').insert({user_id:user.id,list_key:listKey,word:original,meaning:ja,example:ex,page:Math.max(1,Math.ceil((lists[listKey]||[]).findIndex(item=>item.ko===original)/80)+1)}).select('word');
-      }else result=await supabaseClient.from('vocab_words').update({word:ko,meaning:ja,example:ex}).eq('user_id',user.id).eq('list_key',listKey).eq('word',original).select('word');
+        if(found?.length)result=await supabaseClient.from('vocab_words').update({meaning:ja,example:ex,example_meaning:exja}).eq('user_id',user.id).eq('list_key',listKey).eq('word',original).select('word');
+        else result=await supabaseClient.from('vocab_words').insert({user_id:user.id,list_key:listKey,word:original,meaning:ja,example:ex,example_meaning:exja,page:Math.max(1,Math.ceil((lists[listKey]||[]).findIndex(item=>item.ko===original)/80)+1)}).select('word');
+      }else result=await supabaseClient.from('vocab_words').update({word:ko,meaning:ja,example:ex,example_meaning:exja}).eq('user_id',user.id).eq('list_key',listKey).eq('word',original).select('word');
       if(result.error)throw result.error;
       if(!result.data?.length)throw new Error('編集対象が見つかりません。');
       dialog.close();await loadRealData();
@@ -339,14 +340,14 @@ async function submitNewWord(event){
   const exja=el('editExJa').value.trim();
   if(!editableListKeys().includes(key)){alert('自作リストを選択してください。');return}
   if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
-  if(exja){alert('例文の日本語訳は現在のvocab_wordsテーブルに保存先がないため、まだ登録できません。今回は空欄にしてください。');return}
+  if(exja&&!ex){alert('例文の日本語訳を登録する場合は、韓国語の例文も入力してください。');return}
   if((lists[key]||[]).some(w=>w.ko===ko)){alert('このリストには同じ単語がすでにあります。');return}
   button.disabled=true;
   try{
     const user=await getSignedInUser();
     const page=Math.max(1,Math.ceil(((lists[key]||[]).length+1)/WORDS_PER_PAGE));
     const {data,error}=await supabaseClient.from('vocab_words')
-      .insert({user_id:user.id,list_key:key,word:ko,meaning:ja,example:ex,page})
+      .insert({user_id:user.id,list_key:key,word:ko,meaning:ja,example:ex,example_meaning:exja,page})
       .select('word');
     if(error)throw error;
     if(!data?.length)throw new Error('追加した単語を確認できませんでした。');
@@ -431,7 +432,7 @@ async function markCard(remembered){
 function nextCard(){if(!cardDeck.length)return;cardIndex=(cardIndex+1)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
 function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.length)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
 function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s===true)return 'known';if(s==='未暗記'||s==='incorrect'||s===false)return 'unknown';return 'unseen'}
-async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
+async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,example_meaning,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example;existing.exja=w.example_meaning||''}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
 // Prevent prototype forms from submitting data until persistence is implemented.
 document.querySelectorAll('dialog form').forEach(form=>form.addEventListener('submit',e=>{e.preventDefault();unsupported()}));
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();go(b.dataset.page)}));
