@@ -68,7 +68,7 @@ function renderCardLists(){
   root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
 }
 function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex();syncNavigatorVisibility()}
-function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('renameListButton').hidden=isBuiltinList(key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
+function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('renameListButton').hidden=isBuiltinList(key);el('deleteListButton').hidden=isBuiltinList(key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
 function toggleListSearch(){
   const panel=el('listSearchPanel'),button=el('listSearchToggle');if(!panel||!button)return;
   const opening=panel.hidden;panel.hidden=!opening;
@@ -287,6 +287,8 @@ async function openWordEditor(w){
   const listKey=currentList,original=w.ko;
   el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';el('editWordExJa').value=w.exja||'';
   dialog.showModal();
+  el('deleteWordBtn').hidden=isBuiltinList(listKey);
+  el('deleteWordBtn').onclick=()=>deleteCustomWord(listKey,original);
   el('saveWordEdit').onclick=async()=>{
     const button=el('saveWordEdit');if(button.disabled)return;
     const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim(),exja=el('editWordExJa').value.trim();
@@ -316,6 +318,51 @@ async function openWordEditor(w){
       dialog.close();await loadRealData();
     }catch(e){showEditError(e)}finally{button.disabled=false}
   };
+}
+async function deleteCustomWord(key,word){
+  if(isBuiltinList(key))return;
+  if(!confirm(`「${word}」を削除しますか？\nこの単語の暗記状況も削除されます。元に戻せません。`))return;
+  const button=el('deleteWordBtn');if(button.disabled)return;
+  button.disabled=true;
+  try{
+    const user=await getSignedInUser();
+    const filter=q=>q.eq('user_id',user.id).eq('list_key',key).eq('word',word);
+    // Progress is keyed by word. Delete it before removing the word record.
+    const progress=await filter(supabaseClient.from('word_progress').delete());
+    if(progress.error)throw progress.error;
+    const result=await filter(supabaseClient.from('vocab_words').delete().select('word'));
+    if(result.error)throw result.error;
+    if(!result.data?.length)throw new Error('削除対象の単語が見つかりません。');
+    el('wordEditDialog').close();
+    await loadRealData();
+    refreshPageSelectors();renderWords();
+  }catch(e){showEditError(e)}finally{button.disabled=false}
+}
+async function deleteCustomList(){
+  const key=currentList;
+  if(isBuiltinList(key))return;
+  const title=listNames[key]||key,words=lists[key]||[];
+  if(!confirm(`自作リスト「${title}」を削除しますか？\n${words.length}語の単語と暗記状況も削除されます。\nこの操作は元に戻せません。`))return;
+  const typed=prompt(`削除を確定するには、リスト名「${title}」を入力してください。`);
+  if(typed===null)return;
+  if(typed!==title){alert('リスト名が一致しないため削除しませんでした。');return}
+  const button=el('deleteListButton');if(button.disabled)return;
+  button.disabled=true;
+  try{
+    const user=await getSignedInUser();
+    const scope=q=>q.eq('user_id',user.id).eq('list_key',key);
+    // Explicit child deletion avoids relying on database cascade settings.
+    const progress=await scope(supabaseClient.from('word_progress').delete());
+    if(progress.error)throw progress.error;
+    const wordsResult=await scope(supabaseClient.from('vocab_words').delete());
+    if(wordsResult.error)throw wordsResult.error;
+    const result=await scope(supabaseClient.from('vocab_lists').delete().select('list_key'));
+    if(result.error)throw result.error;
+    if(!result.data?.length)throw new Error('削除対象のリストが見つかりません。');
+    currentList='beginner';
+    await loadRealData();
+    showListIndex();
+  }catch(e){showEditError(e)}finally{button.disabled=false}
 }
 function openActionChooser(){el('actionDialog')?.showModal()}
 function closeActionChooser(){el('actionDialog')?.close()}
