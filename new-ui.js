@@ -440,3 +440,24 @@ supabaseClient.auth.onAuthStateChange(()=>setTimeout(loadRealData,0));
 loadRealData();go('home');
 
 document.addEventListener('DOMContentLoaded',()=>{el('importExpressionExamples')?.addEventListener('click',importExpressionExamples)});
+
+// Step 22: mount the legacy auth UI outside the scrollable .app so Safari cannot clip it.
+function mountCloudPopup(){
+  const status=document.getElementById('sb-auth-status');
+  const panel=status?.closest('section');
+  if(!panel)return;
+  if(panel.id!=='sb-cloud-popup')panel.id='sb-cloud-popup';
+  if(panel.parentElement!==document.body)document.body.appendChild(panel);
+  const oldHeading=panel.querySelector('h3');
+  if(oldHeading)oldHeading.remove();
+  if(!panel.querySelector('.cloud-popup-heading')){
+    const head=document.createElement('div');head.className='cloud-popup-heading';
+    const icon=document.createElement('span');icon.className='cloud-popup-heading-icon';icon.textContent='☁';
+    const title=document.createElement('span');title.className='cloud-popup-heading-title';title.textContent='クラウド同期';
+    head.append(icon,title);
+    panel.prepend(head);
+  }
+  status.classList.toggle('cloud-signed-in',status.textContent.includes('ログイン中'));
+}
+new MutationObserver(mountCloudPopup).observe(document.body,{childList:true,subtree:true});
+mountCloudPopup();
