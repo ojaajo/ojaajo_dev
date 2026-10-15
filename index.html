@@ -163,10 +163,12 @@ section:has(#sb-auth-status) input{background:#111318!important;color:#f4f5f7!im
 
 /* Step 14: prevent the document itself from scrolling past the bottom navigation.
    Only the app content scrolls; the navigation stays attached to the viewport. */
-html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;position:relative}
+body{position:fixed;inset:0;width:100%;touch-action:pan-y}
 .app{
   height:100vh;
   height:100dvh;
+  max-height:100%;
   overflow-y:auto;
   overflow-x:hidden;
   overscroll-behavior-y:contain;
@@ -174,17 +176,24 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   padding-bottom:calc(88px + env(safe-area-inset-bottom));
 }
 .bottom-nav{position:fixed;bottom:0;left:0;right:0}
-/* Step 15: hide scrollbar chrome without disabling touch scrolling. */
-html,body,.app,main,.page{
-  scrollbar-width:none;
-  -ms-overflow-style:none;
+
+/* Step 19: viewport-safe cloud popup, independent of scrolling content. */
+section:has(#sb-auth-status){
+  position:fixed!important;
+  top:calc(14px + env(safe-area-inset-top))!important;
+  right:calc(14px + env(safe-area-inset-right))!important;
+  left:auto!important;
+  bottom:auto!important;
+  width:min(400px,calc(100vw - 28px))!important;
+  max-width:calc(100vw - 28px)!important;
+  max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+  overflow-y:auto!important;
+  margin:0!important;
+  z-index:10002!important;
+  box-sizing:border-box!important;
 }
-html::-webkit-scrollbar,body::-webkit-scrollbar,
-.app::-webkit-scrollbar,main::-webkit-scrollbar,.page::-webkit-scrollbar{
-  display:none;
-  width:0;
-  height:0;
-}
+/* The navigation is always above content but below the cloud popup. */
+.word-navigator{z-index:1001!important;right:max(12px,env(safe-area-inset-right))!important;bottom:calc(95px + env(safe-area-inset-bottom))!important}
 </style>
 <style>
 /* Supabase cloud control stays above the new bottom navigation */
@@ -236,7 +245,7 @@ header > button[onclick*="settings"]{display:none!important}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="appRoot">
 <header>
   <div><div class="brand">OJAAJO <span>•</span> KOREAN</div><div class="eyebrow">VOCABULARY WORKSPACE</div></div>
   <div id="headerCloudSlot" aria-label="クラウド同期"></div>
@@ -296,7 +305,7 @@ header > button[onclick*="settings"]{display:none!important}
       <div class="field list-search-panel" id="listSearchPanel" hidden><input id="search" type="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()" autocomplete="off" aria-label="単語検索"></div>
       <button type="button" class="range-summary" onclick="togglePageRange()"><span>▤ <span id="rangeSummary">1〜1ページ</span></span><span id="rangeWordCount">6語</span><span>⌄</span></button>
       <div class="range-panel" id="pageRangePanel" hidden><div class="range-fields"><label>開始ページ<select id="startPage" onchange="validatePageRange('start')"></select></label><label>終了ページ<select id="endPage" onchange="validatePageRange('end')"></select></label></div><button class="btn primary full small" onclick="applyPageRange()">この範囲を表示</button></div>
-      <div class="range-panel" id="listSettingsPanel" hidden><div class="setting-choices"><label><input type="checkbox" id="settingKo" checked onchange="setListVisibility('ko',this.checked)"> 韓国語を表示</label><label><input type="checkbox" id="settingJa" checked onchange="setListVisibility('ja',this.checked)"> 日本語を表示</label><label><input type="checkbox" id="shuffleWords" onchange="toggleWordShuffle(this.checked)"> ランダム表示</label><label><input type="checkbox" id="settingExamples" onchange="setListExamples(this.checked)"> 例文を表示</label><label><input type="checkbox" class="dynamicStatusFilter" value="known" checked onchange="renderWords()"> 暗記済み</label><label><input type="checkbox" class="dynamicStatusFilter" value="unseen" checked onchange="renderWords()"> 未確認</label><label><input type="checkbox" class="dynamicStatusFilter" value="unknown" checked onchange="renderWords()"> 未暗記</label></div></div>
+      <div class="range-panel" id="listSettingsPanel" hidden><div class="setting-choices"><label><input type="checkbox" id="settingKo" checked onchange="setListVisibility('ko',this.checked)"> 韓国語を表示</label><label><input type="checkbox" id="settingJa" checked onchange="setListVisibility('ja',this.checked)"> 日本語を表示</label><label><input type="checkbox" id="shuffleWords" onchange="toggleWordShuffle(this.checked)"> ランダム表示</label><label><input type="checkbox" id="settingExamples" checked onchange="setListExamples(this.checked)"> 例文を表示</label><label><input type="checkbox" class="dynamicStatusFilter" value="known" checked onchange="renderWords()"> 暗記済み</label><label><input type="checkbox" class="dynamicStatusFilter" value="unseen" checked onchange="renderWords()"> 未確認</label><label><input type="checkbox" class="dynamicStatusFilter" value="unknown" checked onchange="renderWords()"> 未暗記</label></div></div>
     </div>
     <p class="tiny" id="selectedListSummary"></p>
     <div class="word-list" id="wordList"></div>
@@ -453,6 +462,6 @@ header > button[onclick*="settings"]{display:none!important}
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js?v=20261015-step18"></script>
+<script src="new-ui.js?v=20261015-step19"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 // New UI data bridge — card and list progress share Supabase persistence.
 let lists={},listNames={},currentList='beginner',rangeStart=1,rangeEnd=1;
-let showKo=true,showJa=true,allExamples=false,shuffleEnabled=false;
+let showKo=true,showJa=true,allExamples=true,shuffleEnabled=false;
 const WORDS_PER_PAGE=80;
 const names=[['beginner','初級','beginnerWords'],['intermediate','中級','intermediateWords'],['advanced','上級','advancedWords'],['expressionup','表現力UP','expressionUpWords']];
 function el(id){return document.getElementById(id)}
 function safeText(id,s){if(el(id))el(id).textContent=s}
 function unsupported(){alert('この操作は現在移行中です。旧画面から操作してください。');}
-function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();window.scrollTo(0,0)}
+function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
 function activeWords(){return lists[currentList]||[]}
 function updateHomeStats(){
   const words=Object.values(lists).flat();
@@ -67,8 +67,8 @@ function renderCardLists(){
   const root=el('cardListChoices');if(!root)return;
   root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
 }
-function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex()}
-function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();window.scrollTo(0,0)}
+function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex();syncNavigatorVisibility()}
+function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
 function toggleListSearch(){
   const panel=el('listSearchPanel'),button=el('listSearchToggle');if(!panel||!button)return;
   const opening=panel.hidden;panel.hidden=!opening;
@@ -161,13 +161,21 @@ function renderWords(){
     const status=document.createElement('button');status.type='button';status.className='status status-action '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';status.title='タップして暗記状況を切り替え';status.setAttribute('aria-label',w.ko+'の暗記状況を切り替え');status.addEventListener('click',()=>cycleWordStatus(w,status));
     const menu=document.createElement('button');menu.type='button';menu.className='word-edit-menu';menu.textContent='⋮';menu.title='単語の編集';menu.setAttribute('aria-label','単語・訳・例文の編集');
     menu.addEventListener('click',()=>openWordEditor(w));right.append(status,menu);top.append(body,right);a.append(top);
-    if(w.ex){const btn=document.createElement('button');btn.className='btn small';btn.textContent='例文を見る';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex;btn.onclick=()=>{ex.hidden=!ex.hidden;btn.textContent=ex.hidden?'例文を見る':'例文を隠す'};a.append(btn,ex)}
+    {const btn=document.createElement('button');btn.className='btn small';const ex=document.createElement('div');ex.className='example';ex.hidden=!allExamples;ex.textContent=w.ex||'例文はまだ登録されていません。';const updateExampleButton=()=>{btn.textContent=ex.hidden?'例文を見る':'例文を隠す';btn.setAttribute('aria-expanded',String(!ex.hidden))};updateExampleButton();btn.onclick=()=>{ex.hidden=!ex.hidden;updateExampleButton()};a.append(btn,ex)}
     const rowIndex=visibleWordRows.length;visibleWordRows.push({node:a,word:w});
     a.addEventListener('click',e=>{if(e.target.closest('button'))return;selectedWordIndex=rowIndex;focusSelectedWord(false)});
     root.append(a);
   });
   const list=activeWords();safeText('selectedListSummary',`${list.length}語 ・ 暗記済み ${list.filter(w=>w.known).length}語`);
-  const controls=el('wordNavigator');if(controls)controls.hidden=!visibleWordRows.length;
+  syncNavigatorVisibility();
+}
+// Keep the floating navigator outside the iOS scroll container so it stays visible.
+function syncNavigatorVisibility(){
+  const control=el('wordNavigator');if(!control)return;
+  if(control.parentElement!==document.body)document.body.appendChild(control);
+  const listPage=el('list');
+  const visible=!!(listPage?.classList.contains('active')&&!el('listWordsView')?.hidden&&visibleWordRows.length);
+  control.hidden=!visible;
 }
 // Shared persistence for list and card learning; use the legacy database values.
 async function persistWordStatus(listKey,w,next){
@@ -208,6 +216,18 @@ function placeCloudControl(){
 }
 new MutationObserver(placeCloudControl).observe(document.body,{childList:true,subtree:true});
 placeCloudControl();
+// A close control inside the popup is needed because the popup covers the header cloud icon.
+function ensureCloudPopupClose(){
+  const panel=document.querySelector('section:has(#sb-auth-status)');
+  if(!panel||panel.querySelector('.cloud-popup-close'))return;
+  const close=document.createElement('button');close.type='button';close.className='cloud-popup-close';
+  close.textContent='×';close.setAttribute('aria-label','クラウド設定を閉じる');
+  close.style.cssText='position:sticky;top:0;float:right;z-index:2;width:32px;height:32px;border-radius:9px;background:#303741;color:#f4f5f7;font-size:24px;line-height:1';
+  close.onclick=()=>{panel.style.display='none';el('sb-cloud-toggle')?.setAttribute('aria-expanded','false')};
+  panel.prepend(close);
+}
+new MutationObserver(ensureCloudPopupClose).observe(document.body,{childList:true,subtree:true});
+ensureCloudPopupClose();
 // Hide the legacy connection banner; authentication remains accessible from the cloud control.
 function hideLegacyConnectionBanner(){
   for(const node of document.querySelectorAll('body *')){
