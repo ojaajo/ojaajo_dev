@@ -359,7 +359,7 @@ header > button[onclick*="settings"]{display:none!important}
   </div>
   <div id="listWordsView" hidden>
     <div class="word-list-sticky compact-head">
-      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small subtle" id="listSearchToggle" type="button" onclick="toggleListSearch()" aria-label="検索を開く" aria-expanded="false" title="検索">⌕</button><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
+      <div class="compact-top"><button class="btn small subtle" onclick="showListIndex()">← 戻る</button><strong id="selectedListTitle">初級</strong><button class="btn small subtle" id="renameListButton" type="button" onclick="openRenameList()" hidden>名前変更</button><button class="btn small subtle" id="listSearchToggle" type="button" onclick="toggleListSearch()" aria-label="検索を開く" aria-expanded="false" title="検索">⌕</button><button class="btn small" onclick="openAdd()">＋</button><button class="btn small" onclick="toggleListSettings()" aria-label="表示設定">⚙</button></div>
       <div class="field list-search-panel" id="listSearchPanel" hidden><input id="search" type="search" placeholder="単語・意味・例文を検索…" oninput="renderWords()" autocomplete="off" aria-label="単語検索"></div>
       <button type="button" class="range-summary" onclick="togglePageRange()"><span>▤ <span id="rangeSummary">1〜1ページ</span></span><span id="rangeWordCount">6語</span><span>⌄</span></button>
       <div class="range-panel" id="pageRangePanel" hidden><div class="range-fields"><label>開始ページ<select id="startPage" onchange="validatePageRange('start')"></select></label><label>終了ページ<select id="endPage" onchange="validatePageRange('end')"></select></label></div><button class="btn primary full small" onclick="applyPageRange()">この範囲を表示</button></div>
@@ -505,12 +505,20 @@ header > button[onclick*="settings"]{display:none!important}
 </dialog>
 
 <dialog id="createListDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
-  <form method="dialog" id="createListForm">
+  <form id="createListForm">
     <div class="eyebrow">NEW WORD LIST</div>
     <h2 style="margin-top:6px">新しいリストを作成</h2>
     <p class="tiny">作成したリストには、あとから単語を1語ずつ追加したり、まとめてインポートしたりできます。</p>
     <div class="field"><label for="createListName">リスト名</label><input id="createListName" placeholder="例：語学堂4級、広告・マーケティング" required></div>
-    <div class="row"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="createListBtn" value="default">リストを作成</button></div>
+    <div class="row"><button class="btn" type="button" onclick="document.getElementById('createListDialog').close()">キャンセル</button><button class="btn primary" type="submit" id="createListBtn">リストを作成</button></div>
+  </form>
+</dialog>
+<dialog id="renameListDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
+  <form id="renameListForm">
+    <div class="eyebrow">RENAME WORD LIST</div>
+    <h2 style="margin-top:6px">リスト名を変更</h2>
+    <div class="field"><label for="renameListName">リスト名</label><input id="renameListName" required maxlength="100"></div>
+    <div class="row"><button class="btn" type="button" onclick="document.getElementById('renameListDialog').close()">キャンセル</button><button class="btn primary" type="submit" id="renameListBtn">保存</button></div>
   </form>
 </dialog>
 <dialog id="wordEditDialog" class="word-edit-dialog"><div class="edit-dialog-inner"><h3>単語を編集</h3><label>韓国語<input id="editWordKo" type="text"></label><label>日本語訳<textarea id="editWordJa" rows="3"></textarea></label><label>韓国語の例文<textarea id="editWordEx" rows="3"></textarea></label><label>例文の日本語訳（任意）<textarea id="editWordExJa" rows="3"></textarea></label><div class="row"><button class="btn" type="button" onclick="document.getElementById('wordEditDialog').close()">キャンセル</button><button class="btn primary" type="button" id="saveWordEdit">保存</button></div></div></dialog>
@@ -519,6 +527,6 @@ header > button[onclick*="settings"]{display:none!important}
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js?v=20261015-step21"></script>
+<script src="new-ui.js?v=20261015-step23"></script>
 </body>
 </html>

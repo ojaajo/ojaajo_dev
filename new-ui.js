@@ -68,7 +68,7 @@ function renderCardLists(){
   root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
 }
 function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex();syncNavigatorVisibility()}
-function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
+function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('renameListButton').hidden=isBuiltinList(key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
 function toggleListSearch(){
   const panel=el('listSearchPanel'),button=el('listSearchToggle');if(!panel||!button)return;
   const opening=panel.hidden;panel.hidden=!opening;
@@ -319,7 +319,56 @@ async function openWordEditor(w){
 }
 function openActionChooser(){el('actionDialog')?.showModal()}
 function closeActionChooser(){el('actionDialog')?.close()}
-function openCreateList(){unsupported()}
+function openCreateList(){
+  const dialog=el('createListDialog');
+  if(!dialog)return;
+  el('createListName').value='';
+  dialog.showModal();
+}
+async function saveCreatedList(event){
+  event.preventDefault();
+  const name=el('createListName').value.trim();
+  if(!name){alert('リスト名を入力してください。');return}
+  if(Object.values(listNames).some(n=>n===name)){alert('同じ名前のリストがすでにあります。');return}
+  const button=el('createListBtn');if(button.disabled)return;
+  button.disabled=true;
+  try{
+    const user=await getSignedInUser();
+    const key='custom_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9);
+    const {data,error}=await supabaseClient.from('vocab_lists').insert({user_id:user.id,list_key:key,name}).select('list_key');
+    if(error)throw error;
+    if(!data?.length)throw new Error('作成したリストを確認できませんでした。');
+    el('createListDialog').close();
+    await loadRealData();
+    go('list');
+  }catch(e){showEditError(e)}finally{button.disabled=false}
+}
+function openRenameList(){
+  if(isBuiltinList(currentList))return;
+  const dialog=el('renameListDialog');if(!dialog)return;
+  el('renameListName').value=listNames[currentList]||'';
+  dialog.dataset.listKey=currentList;
+  dialog.showModal();
+}
+async function saveRenamedList(event){
+  event.preventDefault();
+  const dialog=el('renameListDialog'),key=dialog.dataset.listKey;
+  const name=el('renameListName').value.trim();
+  if(!key||isBuiltinList(key))return;
+  if(!name){alert('リスト名を入力してください。');return}
+  if(Object.entries(listNames).some(([k,n])=>k!==key&&n===name)){alert('同じ名前のリストがすでにあります。');return}
+  const button=el('renameListBtn');if(button.disabled)return;
+  button.disabled=true;
+  try{
+    const user=await getSignedInUser();
+    const {data,error}=await supabaseClient.from('vocab_lists').update({name}).eq('user_id',user.id).eq('list_key',key).select('list_key');
+    if(error)throw error;
+    if(!data?.length)throw new Error('変更対象のリストが見つかりません。');
+    dialog.close();
+    await loadRealData();
+    safeText('selectedListTitle',listNames[key]||key);
+  }catch(e){showEditError(e)}finally{button.disabled=false}
+}
 function openImport(){unsupported()}
 function openAdd(){
   const keys=editableListKeys(),dialog=el('editDialog'),target=el('wordTargetList');
@@ -358,6 +407,8 @@ async function submitNewWord(event){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   const form=el('wordForm');if(form)form.addEventListener('submit',submitNewWord);
+  el('createListForm')?.addEventListener('submit',saveCreatedList);
+  el('renameListForm')?.addEventListener('submit',saveRenamedList);
 });
 
 // Card learning: settings and navigation use real words and shared progress persistence.
