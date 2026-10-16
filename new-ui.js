@@ -5,7 +5,67 @@ const WORDS_PER_PAGE=80;
 const names=[['beginner','初級','beginnerWords'],['intermediate','中級','intermediateWords'],['advanced','上級','advancedWords'],['expressionup','表現力UP','expressionUpWords']];
 function el(id){return document.getElementById(id)}
 function safeText(id,s){if(el(id))el(id).textContent=s}
-function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
+// Step 37: device-only view snapshots. No vocabulary or progress is stored here.
+const LIST_VIEW_STORE='ojaajo.listViews.v1';
+const LAST_VIEW_STORE='ojaajo.lastView.v1';
+let listViewSnapshots={};
+let initialViewRestored=false;
+let restoringListView=false;
+let viewSaveTimer=null;
+try{const saved=JSON.parse(localStorage.getItem(LIST_VIEW_STORE)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))listViewSnapshots=saved}catch(e){console.warn('表示状態を読み込めませんでした',e)}
+function saveListView(){
+ if(restoringListView||el('listWordsView')?.hidden||!currentList)return;
+ const root=el('appRoot');
+ listViewSnapshots[currentList]={
+  rangeStart,rangeEnd,search:el('search')?.value||'',searchOpen:!el('listSearchPanel')?.hidden,
+  showKo,showJa,allExamples,shuffleEnabled,
+  statuses:[...document.querySelectorAll('.dynamicStatusFilter:checked')].map(c=>c.value),
+  scrollTop:root?.scrollTop||0,selectedWordIndex,
+  pageRangeOpen:!el('pageRangePanel')?.hidden,settingsOpen:!el('listSettingsPanel')?.hidden
+ };
+ try{localStorage.setItem(LIST_VIEW_STORE,JSON.stringify(listViewSnapshots));localStorage.setItem(LAST_VIEW_STORE,JSON.stringify({page:'list',listKey:currentList}))}catch(e){console.warn('表示状態を保存できませんでした',e)}
+}
+function scheduleListViewSave(){if(restoringListView)return;clearTimeout(viewSaveTimer);viewSaveTimer=setTimeout(saveListView,180)}
+function rememberPage(page){try{localStorage.setItem(LAST_VIEW_STORE,JSON.stringify({page}))}catch(e){}}
+function restoreInitialView(){
+ if(initialViewRestored)return;
+ initialViewRestored=true;
+ let previous;try{previous=JSON.parse(localStorage.getItem(LAST_VIEW_STORE)||'null')}catch(e){}
+ if(previous?.page==='list'&&previous.listKey&&Object.hasOwn(lists,previous.listKey)){
+  go('list');openWordList(previous.listKey);return;
+ }
+ if(previous?.page==='list'){go('list');return}
+ if(['home','cards','settings'].includes(previous?.page)){go(previous.page);return}
+ go('home');
+}
+function restoreListView(key){
+ const state=listViewSnapshots[key]||{};
+ const max=Math.max(1,Math.ceil(activeWords().length/WORDS_PER_PAGE));
+ rangeStart=Math.max(1,Math.min(max,Number(state.rangeStart)||1));
+ rangeEnd=Math.max(rangeStart,Math.min(max,Number(state.rangeEnd)||rangeStart));
+ showKo=state.showKo!==false;showJa=state.showJa!==false;
+ allExamples=state.allExamples!==false;shuffleEnabled=state.shuffleEnabled===true;
+ for(const [id,value] of [['settingKo',showKo],['settingJa',showJa],['settingExamples',allExamples],['shuffleWords',shuffleEnabled]]){if(el(id))el(id).checked=value}
+ const allowed=Array.isArray(state.statuses)?state.statuses:['known','unknown','unseen'];
+ document.querySelectorAll('.dynamicStatusFilter').forEach(c=>c.checked=allowed.includes(c.value));
+ if(el('search'))el('search').value=state.search||'';
+ const searchOpen=!!state.searchOpen||!!state.search;
+ if(el('listSearchPanel'))el('listSearchPanel').hidden=!searchOpen;
+ if(el('listSearchToggle')){el('listSearchToggle').textContent=searchOpen?'×':'⌕';el('listSearchToggle').setAttribute('aria-expanded',String(searchOpen))}
+ if(el('pageRangePanel'))el('pageRangePanel').hidden=!state.pageRangeOpen;
+ if(el('listSettingsPanel'))el('listSettingsPanel').hidden=!state.settingsOpen;
+ refreshPageSelectors();renderWords();
+ const root=el('appRoot');
+ // Wait until the newly rendered list has a measurable scroll height.
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(currentList!==key||el('listWordsView')?.hidden)return;
+  if(root)root.scrollTop=Math.max(0,Number(state.scrollTop)||0);
+  selectedWordIndex=Number.isInteger(state.selectedWordIndex)?Math.min(state.selectedWordIndex,visibleWordRows.length-1):-1;
+  visibleWordRows.forEach((item,i)=>item.node.classList.toggle('selected-word',i===selectedWordIndex));
+  restoringListView=false;
+ }));
+}
+function go(page){if(!el('listWordsView')?.hidden)saveListView();if(initialViewRestored&&page!=='list')rememberPage(page);document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='list')showListIndex();if(page==='cards')showCardLists();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
 function activeWords(){return lists[currentList]||[]}
 function updateHomeStats(){
   const words=Object.values(lists).flat();
@@ -66,8 +126,18 @@ function renderCardLists(){
   const root=el('cardListChoices');if(!root)return;
   root.replaceChildren(...Object.keys(lists).map(key=>createListChoice(key,()=>chooseCardList(key))));
 }
-function showListIndex(){el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex();syncNavigatorVisibility()}
-function openWordList(key){revealedWords.clear();closeListSearch();currentList=key;rangeStart=1;rangeEnd=1;el('listIndexView').hidden=true;el('listWordsView').hidden=false;safeText('selectedListTitle',listNames[key]||key);el('renameListButton').hidden=isBuiltinList(key);el('deleteListButton').hidden=isBuiltinList(key);el('search').value='';refreshPageSelectors();renderWords();el('appRoot')?.scrollTo(0,0);syncNavigatorVisibility()}
+function showListIndex(){saveListView();try{localStorage.setItem(LAST_VIEW_STORE,JSON.stringify({page:'list'}))}catch(e){}el('listIndexView').hidden=false;el('listWordsView').hidden=true;renderListIndex();syncNavigatorVisibility()}
+function openWordList(key){
+ if(!Object.hasOwn(lists,key))return;
+ if(!el('listWordsView')?.hidden)saveListView();
+ restoringListView=true;revealedWords.clear();currentList=key;
+ el('listIndexView').hidden=true;el('listWordsView').hidden=false;
+ safeText('selectedListTitle',listNames[key]||key);
+ el('renameListButton').hidden=isBuiltinList(key);el('deleteListButton').hidden=isBuiltinList(key);
+ restoreListView(key);
+ try{localStorage.setItem(LAST_VIEW_STORE,JSON.stringify({page:'list',listKey:key}))}catch(e){}
+ syncNavigatorVisibility();
+}
 function toggleListSearch(){
   const panel=el('listSearchPanel'),button=el('listSearchToggle');if(!panel||!button)return;
   const opening=panel.hidden;panel.hidden=!opening;
@@ -129,6 +199,28 @@ function repeatSelectedWord(){
   if(selectedWordIndex<0)selectedWordIndex=0;
   focusSelectedWord(true);
 }
+// Step 33: paired examples are stored as newline-delimited strings in existing DB columns.
+function examplePairs(ex,exja){
+ const korean=String(ex||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const japanese=String(exja||'').split(/\r?\n/).map(x=>x.trim());
+ return korean.map((ko,i)=>({ko,ja:japanese[i]||''}));
+}
+function buildExampleRows(ex,exja){
+ const wrapper=document.createElement('div');wrapper.className='example-pairs';
+ for(const pair of examplePairs(ex,exja)){
+  const row=document.createElement('div');row.className='example-pair';
+  const ko=document.createElement('div');ko.className='example-ko';ko.textContent=pair.ko;
+  const ja=document.createElement('div');ja.className='example-ja';ja.textContent=pair.ja;
+  if(!pair.ja)row.classList.add('no-translation');
+  row.append(ko,ja);wrapper.append(row);
+ }
+ return wrapper;
+}
+function validateExampleLines(ex,exja){
+ const ko=String(ex||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const ja=String(exja||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ if(ja.length>ko.length)throw new Error('例文訳の行数が韓国語例文より多くなっています。');
+}
 function renderWords(){
   const root=el('wordList');if(!root)return;
   root.replaceChildren();visibleWordRows=[];selectedWordIndex=-1;
@@ -160,7 +252,7 @@ function renderWords(){
     const status=document.createElement('button');status.type='button';status.className='status status-action '+(w.status==='known'?'known':w.status==='unknown'?'unknown':'');status.textContent=w.status==='known'?'✓ 暗記済み':w.status==='unknown'?'× 未暗記':'○ 未確認';status.title='タップして暗記状況を切り替え';status.setAttribute('aria-label',w.ko+'の暗記状況を切り替え');status.addEventListener('click',()=>cycleWordStatus(w,status));
     const menu=document.createElement('button');menu.type='button';menu.className='word-edit-menu';menu.textContent='⋮';menu.title='単語の編集';menu.setAttribute('aria-label','単語・訳・例文の編集');
     menu.addEventListener('click',()=>openWordEditor(w));right.append(status,menu);top.append(body,right);a.append(top);
-    if(allExamples && String(w.ex||'').trim()){const ex=document.createElement('div');ex.className='example example-line';const ko=document.createElement('div');ko.textContent=w.ex;ex.append(ko);if(String(w.exja||'').trim()){const ja=document.createElement('div');ja.className='example-translation';ja.textContent=w.exja;ex.append(ja)}a.append(ex)}
+    if(allExamples && String(w.ex||'').trim()){const ex=document.createElement('div');ex.className='example example-line';ex.append(buildExampleRows(w.ex,w.exja));a.append(ex)}
     const rowIndex=visibleWordRows.length;visibleWordRows.push({node:a,word:w});
     a.addEventListener('click',e=>{if(e.target.closest('button'))return;selectedWordIndex=rowIndex;focusSelectedWord(false)});
     root.append(a);
@@ -191,7 +283,7 @@ async function persistWordStatus(listKey,w,next){
   else result=await supabaseClient.from('word_progress').insert({user_id:user.id,list_key:listKey,word:w.ko,status:value});
   if(result.error)throw result.error;
   w.status=next;w.known=next==='known';
-  updateHomeStats();renderListIndex();renderCardLists();
+  updateHomeStats();populateExportLists();renderListIndex();renderCardLists();
   if(currentList===listKey){
     const words=activeWords();
     safeText('selectedListSummary',`${words.length}語 ・ 暗記済み ${words.filter(x=>x.known).length}語`);
@@ -281,18 +373,45 @@ async function importExpressionExamples(){
 
 function editableListKeys(){return Object.keys(lists).filter(k=>!isBuiltinList(k))}
 function showEditError(e){console.error('単語保存エラー',e);alert('保存できませんでした：'+(e?.message||String(e)))}
+// Step 34: keep example translations paired while editing.
+function addWordExamplePair(ko='',ja=''){
+ const root=el('editExamplePairs');if(!root)return;
+ const pair=document.createElement('div');pair.className='example-editor-pair';
+ const head=document.createElement('div');head.className='example-editor-pair-head';
+ const number=document.createElement('span');
+ const remove=document.createElement('button');remove.type='button';remove.className='example-remove-btn';remove.textContent='削除';
+ remove.onclick=()=>{pair.remove();renumberWordExamplePairs()};head.append(number,remove);
+ const fields=document.createElement('div');fields.className='example-editor-pair-fields';
+ for(const [cls,labelText,value] of [['edit-pair-ko','韓国語の例文',ko],['edit-pair-ja','日本語訳（任意）',ja]]){
+  const label=document.createElement('label');label.textContent=labelText;
+  const area=document.createElement('textarea');area.className=cls;area.rows=2;area.value=value;
+  area.placeholder=cls==='edit-pair-ko'?'韓国語の例文':'例文の日本語訳';
+  label.append(area);fields.append(label);
+ }
+ pair.append(head,fields);root.append(pair);renumberWordExamplePairs();
+}
+function renumberWordExamplePairs(){
+ [...el('editExamplePairs').children].forEach((node,i)=>node.querySelector('.example-editor-pair-head span').textContent='例文 '+(i+1));
+}
+function collectWordExamplePairs(){
+ const pairs=[...el('editExamplePairs').children].map(node=>({ko:node.querySelector('.edit-pair-ko').value.trim(),ja:node.querySelector('.edit-pair-ja').value.trim()}));
+ if(pairs.some(p=>!p.ko&&p.ja))throw new Error('日本語訳だけが入力されている例文があります。韓国語も入力してください。');
+ if(pairs.some(p=>p.ko.includes('\n')||p.ja.includes('\n')))throw new Error('1組につき例文は1文ずつ入力してください。');
+ const valid=pairs.filter(p=>p.ko);
+ return {ex:valid.map(p=>p.ko).join('\n'),exja:valid.map(p=>p.ja).join('\n')};
+}
 async function openWordEditor(w){
   const dialog=el('wordEditDialog');if(!dialog)return;
   const listKey=currentList,original=w.ko;
-  el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editWordEx').value=w.ex||'';el('editWordExJa').value=w.exja||'';
+  el('editWordKo').value=w.ko;el('editWordJa').value=w.ja;el('editExamplePairs').replaceChildren();for(const pair of examplePairs(w.ex,w.exja))addWordExamplePair(pair.ko,pair.ja);el('addEditExamplePair').onclick=()=>addWordExamplePair();
   dialog.showModal();
   el('deleteWordBtn').hidden=isBuiltinList(listKey);
   el('deleteWordBtn').onclick=()=>deleteCustomWord(listKey,original);
   el('saveWordEdit').onclick=async()=>{
     const button=el('saveWordEdit');if(button.disabled)return;
-    const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim(),ex=el('editWordEx').value.trim(),exja=el('editWordExJa').value.trim();
+    const ko=el('editWordKo').value.trim(),ja=el('editWordJa').value.trim();let ex,exja;try{({ex,exja}=collectWordExamplePairs())}catch(error){alert(error.message);return}
     if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
-    if(exja&&!ex){alert('例文の日本語訳を登録する場合は、韓国語の例文も入力してください。');return}
+    try{validateExampleLines(ex,exja)}catch(error){alert(error.message);return}
     if(isBuiltinList(listKey)&&ko!==original){alert('標準リストの単語そのものは変更できません。意味と例文を編集してください。');return}
     // A word is the progress key. Renaming a studied word would orphan its progress;
     // defer that operation until a safe progress migration is implemented.
@@ -419,10 +538,10 @@ async function saveRenamedList(event){
 function openImport(){
  const d=el('importDialog'),s=el('importTargetList');
  s.replaceChildren();
- for(const key of editableListKeys()){
+ for(const key of Object.keys(lists)){
    const o=document.createElement('option');o.value=key;o.textContent=listNames[key]||key;s.append(o);
  }
- el('importMode').value=editableListKeys().length?'existing':'new';
+ el('importMode').value=Object.keys(lists).length?'existing':'new';
  el('importFile').value='';el('importText').value='';el('newListName').value='';
  updateImportMode();d.showModal();
 }
@@ -436,54 +555,89 @@ async function readImportFile(){
  try{el('importText').value=await file.text()}catch(e){alert('ファイルを読めませんでした: '+e.message)}
 }
 function parseImport(text){
- const result=[],seen=new Set();
- for(const [i,line] of text.replace(/^\uFEFF/,'').split(/\r?\n/).entries()){
-  if(!line.trim())continue;
-  const pos=line.search(/[:：]/);
-  if(pos<1)throw new Error((i+1)+'行目に「単語:意味」がありません。');
+ const result=[],seen=new Set();let current=null,pending=null;
+ const rows=text.replace(/^\uFEFF/,'').split(/\r?\n/);
+ function finish(){
+  if(!current)return;
+  if(pending&&pending.ko){current.pairs.push(pending);pending=null}
+  current.example=current.pairs.map(p=>p.ko).join('\n');
+  current.example_meaning=current.pairs.map(p=>p.ja).join('\n');
+  delete current.pairs;
+ }
+ for(let i=0;i<rows.length;i++){
+  const line=rows[i].trim();if(!line)continue;
+  if(/^例文[:：]/.test(line)){
+   if(!current)throw new Error((i+1)+'行目：例文の前に単語が必要です。');
+   const payload=line.replace(/^例文[:：]/,'');
+   const m=payload.match(/^(.*?)例文訳[:：](.*)$/);
+   if(pending){current.pairs.push(pending);pending=null}
+   if(m){if(!m[1].trim())throw new Error((i+1)+'行目：韓国語例文が空です。');current.pairs.push({ko:m[1].trim(),ja:m[2].trim()})}
+   else {if(!payload.trim())throw new Error((i+1)+'行目：韓国語例文が空です。');pending={ko:payload.trim(),ja:''}}
+   continue;
+  }
+  if(/^例文訳[:：]/.test(line)){
+   if(!current||!pending)throw new Error((i+1)+'行目：対応する韓国語例文がありません。');
+   pending.ja=line.replace(/^例文訳[:：]/,'').trim();current.pairs.push(pending);pending=null;continue;
+  }
+  const pos=line.search(/[:：]/);if(pos<1)throw new Error((i+1)+'行目に「単語:意味」がありません。');
   const word=line.slice(0,pos).trim(),meaning=line.slice(pos+1).trim();
   if(!word||!meaning)throw new Error((i+1)+'行目の単語または意味が空です。');
-  if(!seen.has(word)){result.push({word,meaning});seen.add(word)}
+  if(seen.has(word))throw new Error((i+1)+'行目：'+word+' が重複しています。');
+  finish();current={word,meaning,pairs:[],example:'',example_meaning:''};result.push(current);seen.add(word);
  }
- return result;
+ finish();return result;
 }
+function exportWordList(){
+ const key=el('exportListSelect')?.value||currentList;
+ const rows=lists[key];if(!rows){alert('書き出すリストを選択してください。');return}
+ const text=rows.map(w=>[w.ko+':'+w.ja,...examplePairs(w.ex,w.exja).map(p=>'例文:'+p.ko+(p.ja?'例文訳:'+p.ja:''))].join('\n')).join('\n\n')+'\n';
+ const url=URL.createObjectURL(new Blob(['\uFEFF',text],{type:'text/plain;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download=(listNames[key]||key).replace(/[\\/:*?"<>|]/g,'_')+'.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function populateExportLists(){const select=el('exportListSelect');if(!select)return;const value=select.value;select.replaceChildren();for(const key of Object.keys(lists)){const option=document.createElement('option');option.value=key;option.textContent=listNames[key]||key;select.append(option)}select.value=Object.hasOwn(lists,value)?value:currentList}
 async function submitImport(e){
- e.preventDefault();
- const btn=el('doImport');if(btn.disabled)return;
- const mode=el('importMode').value,name=el('newListName').value.trim();
- let key=el('importTargetList').value;
+ e.preventDefault();const btn=el('doImport');if(btn.disabled)return;
+ const mode=el('importMode').value,name=el('newListName').value.trim();let key=el('importTargetList').value;
  if(mode==='new'&&(!name||Object.values(listNames).includes(name))){alert('新しいリスト名を入力してください（既存名は不可）。');return}
- if(mode==='existing'&&!editableListKeys().includes(key)){alert('登録先を選択してください。');return}
- let parsed;
- try{parsed=parseImport(el('importText').value)}catch(err){alert(err.message);return}
+ if(mode==='existing'&&!Object.hasOwn(lists,key)){alert('登録先を選択してください。');return}
+ let parsed;try{parsed=parseImport(el('importText').value)}catch(err){alert(err.message);return}
  if(!parsed.length){alert('単語データがありません。');return}
- const existing=new Set(mode==='existing'?(lists[key]||[]).map(w=>w.ko):[]);
- const fresh=parsed.filter(w=>!existing.has(w.word));
- if(!fresh.length){alert('全単語が登録済みです。');return}
- btn.disabled=true;let saved=0,created=false;
+ const policy=el('importDuplicatePolicy')?.value||'skip';
+ const known=new Map(mode==='existing'?(lists[key]||[]).map(w=>[w.ko,w]):[]);
+ const fresh=parsed.filter(w=>!known.has(w.word));
+ const duplicates=parsed.filter(w=>known.has(w.word));
+ const updates=policy==='skip'?[]:duplicates.filter(w=>policy==='overwrite'||((!known.get(w.word).ex&&w.example)||(!known.get(w.word).exja&&w.example_meaning)));
+ if(!fresh.length&&!updates.length){alert('更新対象がありません。重複単語の扱いを確認してください。');return}
+ const summary=`新規 ${fresh.length}語 / 更新 ${updates.length}語 / スキップ ${duplicates.length-updates.length}語。暗記状況は変更しません。実行しますか？`;
+ if(!confirm(summary))return;
+ btn.disabled=true;let saved=0,changed=0,created=false;
  try{
   const user=await getSignedInUser();
   if(mode==='new'){
    key='custom_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9);
    const r=await supabaseClient.from('vocab_lists').insert({user_id:user.id,list_key:key,name}).select('list_key');
-   if(r.error)throw r.error;
-   if(!r.data?.length)throw new Error('リスト作成を確認できませんでした。');
-   created=true;
+   if(r.error)throw r.error;if(!r.data?.length)throw new Error('リスト作成を確認できませんでした。');created=true;
   }
+  // Existing cloud rows can override bundled words.js entries; do not touch word_progress.
+  const {data:cloudRows,error:cloudError}=await supabaseClient.from('vocab_words').select('word,meaning,example,example_meaning').eq('user_id',user.id).eq('list_key',key).range(0,9999);
+  if(cloudError)throw cloudError;
+  const cloudMap=new Map((cloudRows||[]).map(w=>[w.word,w]));
   const start=(lists[key]||[]).length;
   for(let i=0;i<fresh.length;i+=100){
-   const batch=fresh.slice(i,i+100).map((w,j)=>({user_id:user.id,list_key:key,word:w.word,meaning:w.meaning,example:'',example_meaning:'',page:Math.floor((start+i+j)/80)+1}));
-   const r=await supabaseClient.from('vocab_words').insert(batch).select('word');
-   if(r.error)throw r.error;
-   if(r.data?.length!==batch.length)throw new Error('登録件数が一致しません。');
-   saved+=batch.length;
+   const batch=fresh.slice(i,i+100).map((w,j)=>({user_id:user.id,list_key:key,word:w.word,meaning:w.meaning,example:w.example,example_meaning:w.example_meaning,page:Math.floor((start+i+j)/80)+1}));
+   const r=await supabaseClient.from('vocab_words').insert(batch).select('word');if(r.error)throw r.error;if(r.data?.length!==batch.length)throw new Error('登録件数が一致しません。');saved+=batch.length;
   }
-  el('importDialog').close();await loadRealData();
-  alert(saved+'語を登録しました。'+(parsed.length-fresh.length?'（重複'+(parsed.length-fresh.length)+'語はスキップ）':''));
- }catch(err){
-  showEditError(new Error(err.message+(created||saved?'（途中まで登録されている可能性があります。再試行前に確認してください）':'')));
-  await loadRealData();
- }finally{btn.disabled=false}
+  for(const w of updates){
+   const old=known.get(w.word),cloud=cloudMap.get(w.word);
+   // For fill-only, preserve existing meanings and examples.
+   const data=policy==='overwrite'?{meaning:w.meaning,example:w.example,example_meaning:w.example_meaning}:{meaning:cloud?.meaning||old.ja,example:cloud?.example||old.ex||w.example,example_meaning:cloud?.example_meaning||old.exja||w.example_meaning};
+   if(cloud){const r=await supabaseClient.from('vocab_words').update(data).eq('user_id',user.id).eq('list_key',key).eq('word',w.word).select('word');if(r.error)throw r.error;if(r.data?.length!==1)throw new Error(w.word+' の更新を確認できません。')}
+   else{const r=await supabaseClient.from('vocab_words').insert({user_id:user.id,list_key:key,word:w.word,...data,page:old.page||Math.floor((lists[key]||[]).indexOf(old)/80)+1}).select('word');if(r.error)throw r.error;if(r.data?.length!==1)throw new Error(w.word+' の登録を確認できません。')}
+   changed++;
+  }
+  el('importDialog').close();await loadRealData();alert(`登録 ${saved}語・更新 ${changed}語。暗記状況は維持しました。`);
+ }catch(err){showEditError(new Error(err.message+(created||saved||changed?'（途中まで反映されている可能性があります。再試行前に確認してください）':'')));await loadRealData()}
+ finally{btn.disabled=false}
 }
 
 function openAdd(){
@@ -505,7 +659,7 @@ async function submitNewWord(event){
   const exja=el('editExJa').value.trim();
   if(!editableListKeys().includes(key)){alert('自作リストを選択してください。');return}
   if(!ko||!ja){alert('韓国語と日本語訳は必須です。');return}
-  if(exja&&!ex){alert('例文の日本語訳を登録する場合は、韓国語の例文も入力してください。');return}
+  try{validateExampleLines(ex,exja)}catch(error){alert(error.message);return}
   if((lists[key]||[]).some(w=>w.ko===ko)){alert('このリストには同じ単語がすでにあります。');return}
   button.disabled=true;
   try{
@@ -577,7 +731,8 @@ function renderCard(){
   safeText('cardKorean',w.ko);safeText('cardMeaning',meaningRevealed?w.ja:'…');
   safeText('revealBtn',meaningRevealed?'意味を隠す':'意味を表示する');
   el('cardExample').hidden=!exampleShown;
-  safeText('cardExampleText',w.ex||'例文は未登録です。');safeText('cardExampleMeaning',w.exja||'');
+  safeText('cardExampleToggleBtn',exampleShown?'例文を非表示':'例文を表示');
+  const target=el('cardExampleText');target.replaceChildren();if(w.ex)target.append(buildExampleRows(w.ex,w.exja));else target.textContent='例文は未登録です。';safeText('cardExampleMeaning','');
 }
 function playCardVoice(force=false){
   if(!force&&!el('cardAutoVoice').checked)return;
@@ -599,10 +754,10 @@ async function markCard(remembered){
   }catch(error){console.error('カードの暗記状況保存失敗',error);alert('暗記状況を保存できませんでした：'+error.message)}
   finally{cardSaveBusy=false;buttons.forEach(b=>b.disabled=false)}
 }
-function nextCard(){if(!cardDeck.length)return;cardIndex=(cardIndex+1)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
-function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.length)%cardDeck.length;meaningRevealed=false;exampleShown=false;renderCard();playCardVoice()}
+function nextCard(){if(!cardDeck.length)return;cardIndex=(cardIndex+1)%cardDeck.length;meaningRevealed=false;renderCard();playCardVoice()}
+function prevCard(){if(!cardDeck.length)return;cardIndex=(cardIndex-1+cardDeck.length)%cardDeck.length;meaningRevealed=false;renderCard();playCardVoice()}
 function mapStatus(s){if(s==='暗記済み'||s==='暗記済'||s==='correct'||s===true)return 'known';if(s==='未暗記'||s==='incorrect'||s===false)return 'unknown';return 'unseen'}
-async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,example_meaning,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example;existing.exja=w.example_meaning||''}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
+async function loadRealData(){if(typeof supabaseClient==='undefined'){safeText('cloudStatusText','接続できません');return}try{const {data:auth,error:authErr}=await supabaseClient.auth.getUser();if(authErr)throw authErr;const user=auth?.user;safeText('cloudStatusText',user?'ログイン中：'+user.email:'未ログイン');safeText('cloudStatusBadge',user?'接続中':'未接続');lists={};listNames={};for(const [key,name,variable] of names){const builtin={beginner:typeof beginnerWords!=='undefined'?beginnerWords:[],intermediate:typeof intermediateWords!=='undefined'?intermediateWords:[],advanced:typeof advancedWords!=='undefined'?advancedWords:[],expressionup:typeof expressionUpWords!=='undefined'?expressionUpWords:[]};const source=builtin[key];lists[key]=(Array.isArray(source)?source:[]).map(w=>{const parsed=splitLegacyExample(w.meaning,w.example);return {ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page}});listNames[key]=name}if(user){const results=await Promise.all([supabaseClient.from('vocab_lists').select('list_key,name').eq('user_id',user.id),supabaseClient.from('vocab_words').select('list_key,word,meaning,example,example_meaning,page').eq('user_id',user.id).range(0,9999),supabaseClient.from('word_progress').select('list_key,word,status').eq('user_id',user.id).range(0,9999)]);for(const r of results)if(r.error)throw r.error;const [listRows,wordRows,progressRows]=results.map(r=>r.data||[]);for(const row of listRows){listNames[row.list_key]=row.name||row.list_key;lists[row.list_key]=[]}for(const w of wordRows){if(!lists[w.list_key])continue;const parsed=splitLegacyExample(w.meaning,w.example);const existing=isBuiltinList(w.list_key)?lists[w.list_key].find(item=>item.ko===w.word):null;if(existing){existing.ja=parsed.meaning;existing.ex=parsed.example;existing.exja=w.example_meaning||''}else lists[w.list_key].push({ko:w.word,ja:parsed.meaning,ex:parsed.example,exja:w.example_meaning||'',status:'unseen',known:false,page:w.page})}const progress=new Map(progressRows.map(w=>[w.list_key+'\u0000'+w.word,mapStatus(w.status)]));for(const [key,words] of Object.entries(lists))for(const w of words){w.status=progress.get(key+'\u0000'+w.ko)||'unseen';w.known=w.status==='known'}}updateHomeStats();populateExportLists();renderListIndex();renderCardLists();if(!el('listWordsView').hidden)renderWords();restoreInitialView()}catch(e){console.error('新UI読込失敗',e);safeText('cloudStatusText','読み込みエラー：'+e.message)}}
 // Prevent prototype forms from submitting data until persistence is implemented.
 
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();go(b.dataset.page)}));
@@ -610,6 +765,15 @@ supabaseClient.auth.onAuthStateChange(()=>setTimeout(loadRealData,0));
 loadRealData();go('home');
 
 document.addEventListener('DOMContentLoaded',()=>{el('importExpressionExamples')?.addEventListener('click',importExpressionExamples)});
+
+
+// Keep the most recent list view even when Safari suspends or reloads the page.
+el('appRoot')?.addEventListener('scroll',()=>{if(!el('listWordsView')?.hidden)scheduleListViewSave()},{passive:true});
+for(const eventName of ['input','change','click']){
+ el('listWordsView')?.addEventListener(eventName,()=>scheduleListViewSave());
+}
+window.addEventListener('pagehide',()=>{clearTimeout(viewSaveTimer);saveListView()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(viewSaveTimer);saveListView()}});
 
 // Step 22: mount the legacy auth UI outside the scrollable .app so Safari cannot clip it.
 function mountCloudPopup(){

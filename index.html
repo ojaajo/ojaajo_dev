@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111318">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="manifest" href="./manifest.webmanifest">
 <title>韓国語単語暗記ツール</title>
 <style>
 :root{color-scheme:dark;--bg:#111318;--panel:#1a1d24;--panel2:#222630;--line:#303540;--text:#f4f5f7;--muted:#9ba2b0;--accent:#b7f36b;--accent-ink:#17200c;--red:#ff8585}
@@ -252,6 +255,31 @@ section:has(#sb-auth-status) a{color:#b7f36b!important}
 #sb-cloud-popup #sb-logout{display:block;margin-left:auto!important;background:transparent!important;border:0!important;color:#b7f36b!important;font-size:13px!important;padding:7px 3px!important}
 #sb-cloud-popup #sb-auth-message{color:#aab2bf!important}
 #sb-cloud-popup .cloud-popup-close{position:absolute!important;top:12px!important;right:12px!important;float:none!important}
+
+/* Step 33: compact paired Korean/Japanese examples, preserving the green rail. */
+.example.example-line{white-space:normal!important}
+.example-pairs{display:flex;flex-direction:column;gap:5px;min-width:0}
+.example-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:12px;align-items:start;min-width:0}
+.example-ko,.example-ja{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.55}
+.example-ko{color:#dce2e9}.example-ja{color:#9fa9b7}
+.example-pair.no-translation{grid-template-columns:minmax(0,1fr)}
+#cardExampleText{margin-top:8px;border-left:3px solid #b7f36b;padding-left:12px}
+#cardExampleText .example-pairs{gap:6px}
+@media(max-width:310px){.example-pair{column-gap:7px}}
+
+/* Step 34: editable Korean/Japanese example pairs */
+.example-editor-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:13px}
+.example-editor-heading span{color:#a4abb7;font-size:11px}
+.example-editor-pairs{display:grid;gap:10px;max-height:36vh;overflow-y:auto;overscroll-behavior:contain}
+.example-editor-pair{border-left:3px solid #b7f36b;padding:2px 0 2px 10px;display:grid;gap:7px}
+.example-editor-pair-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#a4abb7}
+.example-editor-pair-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.example-editor-pair-fields label{min-width:0}
+.example-editor-pair-fields textarea{min-height:74px;resize:vertical;font-size:13px}
+.example-remove-btn{border:0;background:transparent;color:#c5cbd4;padding:3px 6px;cursor:pointer;font-size:12px}
+.example-remove-btn:hover{color:#ff9d9d}
+.example-add-btn{width:100%;border:1px dashed #596453!important;background:#202822!important;color:#b7f36b!important}
+.word-edit-dialog{max-height:90dvh;overflow-y:auto}
 </style>
 <style>
 /* Supabase cloud control stays above the new bottom navigation */
@@ -396,15 +424,15 @@ header > button[onclick*="settings"]{display:none!important}
   </div>
  </div>
  <div id="cardQuizView" hidden>
-  <div class="section-head"><div><button class="btn small subtle" onclick="showCardSetup()">← クイズ設定</button><div class="eyebrow" style="margin-top:10px" id="cardListName">初級</div></div><span class="status" id="cardCounter">1 / 4</span></div>
+  <div class="section-head"><div><button class="btn small subtle" onclick="showCardSetup()">← クイズ設定</button><div class="eyebrow" style="margin-top:10px" id="cardQuizListName">初級</div></div><span class="status" id="cardCounter">1 / 4</span></div>
   <div class="panel card-stage">
-    <div class="eyebrow" id="cardListName">初級</div>
+    <div class="eyebrow" id="cardSetupListName">初級</div>
     <div class="card-ko-line"><div class="card-korean" id="cardKorean">가볍다</div><button type="button" class="audio-btn" onclick="playCardVoice(true)" aria-label="韓国語を再生" title="韓国語を再生"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg></button></div>
     <div class="card-meaning" id="cardMeaning">軽い</div>
-    <div class="card-example" id="cardExample" hidden><strong>例文</strong><div id="cardExampleText"></div><div class="muted tiny" id="cardExampleMeaning" style="margin-top:5px"></div></div>
+    <div class="card-example" id="cardExample" hidden><strong>例文</strong><div id="cardExampleText"></div><div class="muted tiny" id="cardExampleMeaning" hidden></div></div>
     <div class="space"></div>
     <button class="btn full" onclick="revealMeaning()" id="revealBtn">意味を表示する</button>
-    <button class="btn subtle full" style="margin-top:8px" onclick="toggleCardExample()">例文を表示／非表示</button>
+    <button class="btn subtle full" style="margin-top:8px" id="cardExampleToggleBtn" onclick="toggleCardExample()">例文を表示</button>
   </div>
   <div class="card-controls">
     <button class="btn" onclick="markCard(false)">×　未暗記</button>
@@ -419,6 +447,7 @@ header > button[onclick*="settings"]{display:none!important}
 </section>
 
 <section class="page" id="settings">
+  <div class="panel"><h2>単語リストのTXT書き出し</h2><p class="tiny">単語・意味・例文・例文訳を保存します。暗記状況は含まれません。</p><div class="field"><label for="exportListSelect">書き出すリスト</label><select id="exportListSelect"></select></div><button class="btn full" type="button" onclick="exportWordList()">TXTファイルを保存</button></div>
   <div class="section-head"><div><div class="eyebrow">PREFERENCES</div><h1>設定</h1></div></div>
   <div class="panel">
     <h2>クラウド同期</h2>
@@ -464,12 +493,12 @@ header > button[onclick*="settings"]{display:none!important}
 <dialog id="importDialog" style="width:min(560px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
   <form id="importForm">
     <h2>単語をインポート</h2>
-    <p class="tiny">1行に「韓国語:日本語」の形式で入力します。登録先はここで選べます。</p>
+    <p class="tiny">「単語:意味」の次に「例文:韓国語」「例文訳:日本語」を追加できます。既存単語の例文も更新できます。</p>
     <div class="field"><label for="importMode">登録先</label><select id="importMode"><option value="existing">既存リストに追加</option><option value="new">新しいリストを作成して登録</option></select></div>
     <div class="field" id="existingListField"><label for="importTargetList">追加先リスト</label><select id="importTargetList"></select></div>
     <div class="field" id="newListField"><label for="newListName">新しいリスト名</label><input id="newListName" placeholder="例：語学堂4級"></div>
-    <div class="field"><label for="importFile">テキストファイル（.txt）</label><input type="file" id="importFile" accept=".txt,text/plain"></div><div class="field"><label for="importText">単語データ</label><textarea id="importText" rows="7" placeholder="한적하다:人通りが少なく静かだ&#10;잠잠하다:騒ぎが収まって静かだ"></textarea></div>
-    <div class="row"><button class="btn" type="button" onclick="document.getElementById('importDialog').close()">キャンセル</button><button class="btn primary" id="doImport" type="submit">取り込む</button></div>
+    <div class="field"><label for="importFile">テキストファイル（.txt）</label><input type="file" id="importFile" accept=".txt,text/plain"></div><div class="field"><label for="importText">単語データ</label><textarea id="importText" rows="7" placeholder="한적하다:人通りが少なく静かだ&#10;例文:이 동네는 한적하고 조용해요.例文訳:この町は人通りが少なく静かです。"></textarea></div>
+    <div class="field"><label for="importDuplicatePolicy">登録済み単語の扱い</label><select id="importDuplicatePolicy"><option value="skip">スキップ（変更しない）</option><option value="fill">未登録の例文・例文訳だけ追加</option><option value="overwrite">意味・例文・例文訳を上書き</option></select></div><div class="row"><button class="btn" type="button" onclick="document.getElementById('importDialog').close()">キャンセル</button><button class="btn primary" id="doImport" type="submit">取り込む</button></div>
   </form>
 </dialog>
 <dialog id="actionDialog" style="width:min(520px,calc(100% - 28px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px">
@@ -500,12 +529,13 @@ header > button[onclick*="settings"]{display:none!important}
     <div class="row"><button class="btn" type="button" onclick="document.getElementById('renameListDialog').close()">キャンセル</button><button class="btn primary" type="submit" id="renameListBtn">保存</button></div>
   </form>
 </dialog>
-<dialog id="wordEditDialog" class="word-edit-dialog"><div class="edit-dialog-inner"><h3>単語を編集</h3><label>韓国語<input id="editWordKo" type="text"></label><label>日本語訳<textarea id="editWordJa" rows="3"></textarea></label><label>韓国語の例文<textarea id="editWordEx" rows="3"></textarea></label><label>例文の日本語訳（任意）<textarea id="editWordExJa" rows="3"></textarea></label><div class="row"><button class="btn" type="button" onclick="document.getElementById('wordEditDialog').close()">キャンセル</button><button class="btn" type="button" id="deleteWordBtn" hidden>単語を削除</button><button class="btn primary" type="button" id="saveWordEdit">保存</button></div></div></dialog>
+<dialog id="wordEditDialog" class="word-edit-dialog"><div class="edit-dialog-inner"><h3>単語を編集</h3><label>韓国語<input id="editWordKo" type="text"></label><label>日本語訳<textarea id="editWordJa" rows="3"></textarea></label><div class="example-editor-heading"><strong>例文</strong><span>韓国語と日本語訳をセットで管理</span></div><div id="editExamplePairs" class="example-editor-pairs"></div><button type="button" class="btn example-add-btn" id="addEditExamplePair">＋ 例文を追加</button><div class="row"><button class="btn" type="button" onclick="document.getElementById('wordEditDialog').close()">キャンセル</button><button class="btn" type="button" id="deleteWordBtn" hidden>単語を削除</button><button class="btn primary" type="button" id="saveWordEdit">保存</button></div></div></dialog>
 <div id="toast" style="position:fixed;left:50%;bottom:95px;transform:translateX(-50%);background:#f4f5f7;color:#111318;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:750;display:none;z-index:20;max-width:90%;text-align:center"></div>
 
 <script src="words.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="new-ui.js?v=20261015-step26"></script>
+<script src="new-ui.js?v=20261016-step32"></script>
+<script src="./settings-enhancements.js?v=20261016-step31"></script>
 </body>
 </html>
